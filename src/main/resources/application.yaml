@@ -1,0 +1,33 @@
+spring:
+
+  application:
+    name: PetSitter
+
+  datasource:
+    url: jdbc:h2:mem:pet-sitter-db
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+  h2:
+    console:
+      enabled: true
+#      settings:
+#        web-allow-others: true
+
+  jackson:
+    default-property-inclusion: non_null
+    property-naming-strategy: SNAKE_CASE
+
+
+springdoc:
+
+  api-docs:
+    path: /api-docs
+
+  swagger-ui:
+    path: /swagger-ui
