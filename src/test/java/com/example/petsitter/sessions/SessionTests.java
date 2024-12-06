@@ -1,6 +1,7 @@
 package com.example.petsitter.sessions;
 
 import com.example.petsitter.common.Email;
+import com.example.petsitter.jobs.JobTestConfig;
 import com.example.petsitter.users.UserDto;
 import com.example.petsitter.users.UserTestConfig;
 import com.example.petsitter.users.UserTestUtils;
@@ -15,6 +16,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestConstructor;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 
@@ -25,9 +27,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-@Import(UserTestConfig.class)
+@Import({JobTestConfig.class, UserTestConfig.class})
 @RequiredArgsConstructor
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
+@Transactional
 class SessionTests {
 
     private final static String JWT_CLAIMS_ROLES_KEY = "scope";
