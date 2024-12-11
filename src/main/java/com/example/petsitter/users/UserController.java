@@ -7,6 +7,7 @@ import com.example.petsitter.jobs.JobApplicationDto;
 import com.example.petsitter.jobs.JobDto;
 import com.example.petsitter.jobs.JobService;
 import com.example.petsitter.openapi.ApiProblemResponse;
+import com.example.petsitter.sessions.Permissions;
 import com.example.petsitter.sessions.SessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,12 +30,15 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static com.example.petsitter.common.CommonConfig.MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON;
-import static com.example.petsitter.users.User.UserRole.*;
+import static com.example.petsitter.sessions.Permission.Action.*;
+import static com.example.petsitter.sessions.Permission.Attribute.*;
+import static com.example.petsitter.sessions.Permission.Resource.*;
 
 @RestController
 @RequestMapping("/users")
@@ -245,21 +249,16 @@ class UserServiceInternalImpl implements UserServiceInternal {
     @Transactional
     public UUID registerUser(UserDto userDto) {
 
-        if (userDto.hasRole(ADMIN)) {
+        var permission = Permissions.getPermission(CREATE, USER, Map.of(USER_DTO_ATT, userDto));
 
-            throw new ForbiddenException(ForbiddenException.INVALID_VALUE_MSG,
-                "cannot register User with %s role".formatted(ADMIN));
+        if (permission.isDenied()) {
+
+            var optionalReason = permission.getReason();
+
+            throw new ForbiddenException(ForbiddenException.CREATE_MSG, optionalReason.orElse("requested User"));
         }
 
         var invalidArgumentList = new ArrayList<InvalidArgument>();
-
-        var userDtoId = userDto.getId();
-
-        if (userDtoId != null) {
-
-            invalidArgumentList.add(new InvalidArgument("user", "id",
-                "cannot register User with an ID (%s)".formatted(userDtoId)));
-        }
 
         var userDtoEmail = userDto.getEmail();
 
@@ -306,10 +305,12 @@ class UserServiceInternalImpl implements UserServiceInternal {
     @Override
     public UserDto viewUserWithId(UUID userId) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.VIEW_MSG, "User %s".formatted(userId)));
 
-        if (!currentUserSession.hasRoleOrId(ADMIN, userId)) {
+        var permission = currentSession.getPermission(VIEW, USER, Map.of(USER_ID_ATT, userId));
+
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.VIEW_MSG, "User %s".formatted(userId));
         }
 
@@ -321,24 +322,23 @@ class UserServiceInternalImpl implements UserServiceInternal {
     @Transactional
     public UserDto modifyUserWithId(UUID userId, UserDto userDto) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.MODIFY_MSG,
                 "User %s".formatted(userId)));
 
-        if (!currentUserSession.hasRoleOrId(ADMIN, userId)) {
-            throw new ForbiddenException(ForbiddenException.MODIFY_MSG, "User %s".formatted(userId));
-        }
+        var permission = currentSession.getPermission(MODIFY, USER,
 
-        var userDtoId = userDto.getId();
+            Map.of(
+                USER_ID_ATT, userId,
+                USER_DTO_ATT, userDto)
+        );
 
-        if (userDtoId != null && !userDtoId.equals(userId)) {
-            throw new ForbiddenException(ForbiddenException.MODIFY_MSG, "User ID %s".formatted(userId));
-        }
+        if (permission.isDenied()) {
 
-        if (userDto.hasRole(ADMIN)) {
+            var optionalReason = permission.getReason();
 
             throw new ForbiddenException(ForbiddenException.MODIFY_MSG,
-                "User %s with %s role".formatted(userId, ADMIN));
+                optionalReason.orElse("User %s".formatted(userId)));
         }
 
         var userDtoEmail = userDto.getEmail();
@@ -357,19 +357,17 @@ class UserServiceInternalImpl implements UserServiceInternal {
     @Transactional
     public void deleteUserWithId(UUID userId) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.DELETE_MSG,
                 "User %s".formatted(userId)));
 
-        var currentUserIsAdmin = currentUserSession.hasRole(ADMIN);
+        var permission = currentSession.getPermission(DELETE, USER, Map.of(USER_ID_ATT, userId));
 
-        var currentUserIsUserId = currentUserSession.hasId(userId);
-
-        if ( !(currentUserIsAdmin || currentUserIsUserId) ) {
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.DELETE_MSG, "User %s".formatted(userId));
         }
 
-        if (!currentUserIsUserId && !userRepository.existsById(userId)) {
+        if (!currentSession.userId().equals(userId) && !userRepository.existsById(userId)) {
             throw new NotFoundException("User %s".formatted(userId));
         }
 
@@ -381,12 +379,13 @@ class UserServiceInternalImpl implements UserServiceInternal {
     @Override
     public Set<JobDto> viewJobsForUser(UUID userId) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.VIEW_MSG,
                 "Jobs for User %s".formatted(userId)));
 
-        if ( !(currentUserSession.hasRole(ADMIN) || currentUserSession.hasRoleAndId(PET_OWNER, userId)) ) {
+        var permission = currentSession.getPermission(VIEW, JOB, Map.of(JOB_OWNER_ID_ATT, userId));
 
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.VIEW_MSG, "Jobs for User %s".formatted(userId));
         }
 
@@ -396,11 +395,14 @@ class UserServiceInternalImpl implements UserServiceInternal {
     @Override
     public Set<JobApplicationDto> viewApplicationsForUser(UUID userId) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.VIEW_MSG,
                 "Job Applications for User %s".formatted(userId)));
 
-        if ( !(currentUserSession.hasRole(ADMIN) || currentUserSession.hasRoleAndId(PET_SITTER, userId)) ) {
+        var permission = currentSession.getPermission(VIEW, JOB_APPLICATION,
+            Map.of(JOB_APPLICATION_OWNER_ID_ATT, userId));
+
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.VIEW_MSG, "Job Applications for User %s".formatted(userId));
         }
 

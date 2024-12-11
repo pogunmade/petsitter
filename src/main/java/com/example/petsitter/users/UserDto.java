@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Value;
 
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -33,11 +32,4 @@ public class UserDto {
 
     @Size(min = 1, max = 3)
     Set<User.UserRole> roles;
-
-    boolean hasRole(User.UserRole targetRole) {
-
-        return Optional.ofNullable(roles)
-            .map(roles -> roles.stream().anyMatch(role -> role == targetRole))
-            .orElse(false);
-    }
 }

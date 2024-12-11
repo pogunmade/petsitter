@@ -26,13 +26,18 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import static com.example.petsitter.common.CommonConfig.DATE_TIME_FORMATTER;
 import static com.example.petsitter.common.CommonConfig.MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON;
-import static com.example.petsitter.jobs.JobApplication.JobApplicationStatus.*;
-import static com.example.petsitter.users.User.UserRole.*;
+import static com.example.petsitter.sessions.Permission.Action.*;
+import static com.example.petsitter.sessions.Permission.Attribute.*;
+import static com.example.petsitter.sessions.Permission.Resource.JOB;
+import static com.example.petsitter.sessions.Permission.Resource.JOB_APPLICATION;
+import static com.example.petsitter.users.User.UserRole.PET_OWNER;
+import static com.example.petsitter.users.User.UserRole.PET_SITTER;
 
 @RestController
 @RequestMapping("/jobs")
@@ -341,54 +346,43 @@ class JobServiceInternalImpl implements JobServiceInternal {
     @Transactional
     public UUID createJob(JobDto jobDto) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.CREATE_MSG, "Job"));
-
-        var currentUserIsAdmin = currentUserSession.hasRole(ADMIN);
-
-        var currentUserIsPetOwner = currentUserSession.hasRole(PET_OWNER);
 
         var jobDtoCreatorUserId = jobDto.getCreatorUserId();
 
-        var currentUserIsPetOwnerAndIsJobDtoCreatorUserId =
-            currentUserIsPetOwner && currentUserSession.hasId(jobDtoCreatorUserId);
+        var jobOwnerId = jobDtoCreatorUserId != null ? jobDtoCreatorUserId : currentSession.userId();
 
-        var userId = jobDtoCreatorUserId != null ? jobDtoCreatorUserId : currentUserSession.userId();
+        var permission = currentSession.getPermission(CREATE, JOB,
 
-        if ( !(currentUserIsAdmin ||
-               (currentUserIsPetOwner && jobDtoCreatorUserId == null) ||
-               currentUserIsPetOwnerAndIsJobDtoCreatorUserId) ) {
+            Map.of(
+                JOB_OWNER_ID_ATT, jobOwnerId,
+                JOB_DTO_ATT, jobDto)
+        );
+
+        if (permission.isDenied()) {
+
+            var optionalReason = permission.getReason();
 
             throw new ForbiddenException(ForbiddenException.CREATE_MSG,
-                "Job for User %s".formatted(userId));
+                optionalReason.orElse("Job for User %s".formatted(jobOwnerId)));
         }
 
         var invalidArgumentList = new ArrayList<InvalidArgument>();
 
-        var jobDtoId = jobDto.getId();
-
-        if (jobDtoId != null) {
-
-            invalidArgumentList.add(new InvalidArgument("job", "id",
-                "cannot create Job with an ID (%s)".formatted(jobDtoId)));
-        }
-
         var jobDtoStartTime = jobDto.getStartTime();
 
         if (jobDtoStartTime == null) {
-
             invalidArgumentList.add(new InvalidArgument("job", "start_time", InvalidArgument.NULL_VALUE_MSG));
         }
 
         var jobDtoEndTime = jobDto.getEndTime();
 
         if (jobDtoEndTime == null) {
-
             invalidArgumentList.add(new InvalidArgument("job", "end_time", InvalidArgument.NULL_VALUE_MSG));
         }
 
         if (jobDtoStartTime != null && jobDtoEndTime != null && !jobDtoStartTime.isBefore(jobDtoEndTime)) {
-
             invalidArgumentList.add(new InvalidArgument("job", "start time must be before end time"));
         }
 
@@ -398,7 +392,6 @@ class JobServiceInternalImpl implements JobServiceInternal {
             invalidArgumentList.add(new InvalidArgument("job", "activity", InvalidArgument.NULL_VALUE_MSG));
         }
         else if (jobDtoActivity.isBlank()) {
-
             invalidArgumentList.add(new InvalidArgument("job", "activity", InvalidArgument.BLANK_VALUE_MSG));
         }
 
@@ -406,32 +399,28 @@ class JobServiceInternalImpl implements JobServiceInternal {
             invalidArgumentList.add(new InvalidArgument("job", "dog", InvalidArgument.NULL_VALUE_MSG));
         }
 
-        if (currentUserIsAdmin && !currentUserIsPetOwner) {
+        if (jobDtoCreatorUserId != null &&
+            !userService.existsByIdAndRole(jobDtoCreatorUserId, PET_OWNER)) {
 
-            if (jobDtoCreatorUserId == null) {
-
-                invalidArgumentList.add(new InvalidArgument("job", "creator_user_id",
-                    "creating Job as administrator, creator user ID (Pet Owner) must be specified"));
-            }
-            else if (!userService.existsByIdAndRole(jobDtoCreatorUserId, PET_OWNER)) {
-                throw new NotFoundException("Pet Owner with ID %s".formatted(jobDtoCreatorUserId));
-            }
+            throw new NotFoundException("Pet Owner with ID %s".formatted(jobDtoCreatorUserId));
         }
 
         if (!invalidArgumentList.isEmpty()) {
             throw new InvalidArgumentException(invalidArgumentList);
         }
 
-        return jobRepository.save(userId, jobDto).getId();
+        return jobRepository.save(jobOwnerId, jobDto).getId();
     }
 
     @Override
     public Set<JobDto> viewAllJobs() {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.VIEW_MSG, "all Jobs"));
 
-        if (!currentUserSession.hasRole(ADMIN, PET_SITTER)) {
+        var permission = currentSession.getPermission(VIEW, JOB);
+
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.VIEW_MSG, "all Jobs");
         }
 
@@ -441,15 +430,15 @@ class JobServiceInternalImpl implements JobServiceInternal {
     @Override
     public JobDto viewJobWithId(UUID jobId) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.VIEW_MSG, "Job %s".formatted(jobId)));
 
         var jobDto = jobRepository.findDtoById(jobId)
             .orElseThrow(() -> new NotFoundException("Job %s".formatted(jobId)));
 
-        if ( !(currentUserSession.hasRole(ADMIN, PET_SITTER) ||
-               currentUserSession.hasRoleAndId(PET_OWNER, jobDto.getCreatorUserId())) ) {
+        var permission = currentSession.getPermission(VIEW, JOB, Map.of(JOB_OWNER_ID_ATT, jobDto.getCreatorUserId()));
 
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.VIEW_MSG, "Job %s".formatted(jobId));
         }
 
@@ -460,39 +449,28 @@ class JobServiceInternalImpl implements JobServiceInternal {
     @Transactional
     public JobDto modifyJobWithId(UUID jobId, JobDto jobDto) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.MODIFY_MSG, "Job %s".formatted(jobId)));
-
-        var currentUserIsAdmin = currentUserSession.hasRole(ADMIN);
 
         var job = jobRepository.findWithJobOwnerById(jobId)
             .orElseThrow(() -> new NotFoundException("Job %s".formatted(jobId)));
 
         var jobOwnerId = job.getJobOwner().getId();
 
-        if ( !(currentUserIsAdmin || currentUserSession.hasRoleAndId(PET_OWNER, jobOwnerId)) ) {
-            throw new ForbiddenException(ForbiddenException.MODIFY_MSG, "Job %s".formatted(jobId));
-        }
+        var permission = currentSession.getPermission(MODIFY, JOB,
 
-        var jobDtoId = jobDto.getId();
+            Map.of(
+                JOB_ID_ATT, job.getId(),
+                JOB_OWNER_ID_ATT, jobOwnerId,
+                JOB_DTO_ATT, jobDto)
+        );
 
-        if (jobDtoId != null && !jobDtoId.equals(jobId)) {
-            throw new ForbiddenException(ForbiddenException.MODIFY_MSG, "Job ID %s".formatted(jobId));
-        }
+        if (permission.isDenied()) {
 
-        var jobDtoCreatorUserId = jobDto.getCreatorUserId();
+            var optionalReason = permission.getReason();
 
-        if (jobDtoCreatorUserId != null && !jobDtoCreatorUserId.equals(jobOwnerId)) {
-
-            if (!currentUserIsAdmin) {
-
-                throw new ForbiddenException(ForbiddenException.MODIFY_MSG,
-                    "Job creator user ID, Job %s".formatted(jobId));
-            }
-
-            if (!userService.existsByIdAndRole(jobDtoCreatorUserId, PET_OWNER)) {
-                throw new NotFoundException("Pet Owner with ID %s".formatted(jobDtoCreatorUserId));
-            }
+            throw new ForbiddenException(ForbiddenException.MODIFY_MSG,
+                optionalReason.orElse("Job %s".formatted(jobId)));
         }
 
         var jobDtoStartTime = jobDto.getStartTime();
@@ -522,6 +500,15 @@ class JobServiceInternalImpl implements JobServiceInternal {
                     jobDtoEndTime.format(DATE_TIME_FORMATTER), jobStartTime.format(DATE_TIME_FORMATTER)));
         }
 
+        var jobDtoCreatorUserId = jobDto.getCreatorUserId();
+
+        if (jobDtoCreatorUserId != null &&
+            !jobDtoCreatorUserId.equals(jobOwnerId) &&
+            !userService.existsByIdAndRole(jobDtoCreatorUserId, PET_OWNER)) {
+
+            throw new NotFoundException("Pet Owner with ID %s".formatted(jobDtoCreatorUserId));
+        }
+
         return jobRepository.updateJobFromDto(job, jobDto);
     }
 
@@ -529,15 +516,15 @@ class JobServiceInternalImpl implements JobServiceInternal {
     @Transactional
     public void deleteJobWithId(UUID jobId) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.DELETE_MSG, "Job %s".formatted(jobId)));
 
         var jobOwnerId = jobRepository.findJobOwnerIdById(jobId)
             .orElseThrow(() -> new NotFoundException("Job %s".formatted(jobId)));
 
-        if ( !(currentUserSession.hasRole(ADMIN) ||
-               currentUserSession.hasRoleAndId(PET_OWNER, jobOwnerId)) ) {
+        var permission = currentSession.getPermission(DELETE, JOB, Map.of(JOB_OWNER_ID_ATT, jobOwnerId));
 
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.DELETE_MSG, "Job %s".formatted(jobId));
         }
 
@@ -547,16 +534,16 @@ class JobServiceInternalImpl implements JobServiceInternal {
     @Override
     public Set<JobApplicationDto> viewApplicationsForJob(UUID jobId) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.VIEW_MSG,
                 "Job Applications for Job %s".formatted(jobId)));
 
         var jobOwnerId = jobRepository.findJobOwnerIdById(jobId)
             .orElseThrow(() -> new NotFoundException("Job %s".formatted(jobId)));
 
-        if ( !(currentUserSession.hasRole(ADMIN) ||
-               currentUserSession.hasRoleAndId(PET_OWNER, jobOwnerId)) ) {
+        var permission = currentSession.getPermission(VIEW, JOB_APPLICATION, Map.of(JOB_OWNER_ID_ATT, jobOwnerId));
 
+        if (permission.isDenied()) {
             throw new ForbiddenException(ForbiddenException.VIEW_MSG, "Job Applications for Job %s".formatted(jobId));
         }
 
@@ -567,63 +554,32 @@ class JobServiceInternalImpl implements JobServiceInternal {
     @Transactional
     public UUID createJobApplication(UUID jobId, JobApplicationDto jobApplicationDto) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.CREATE_MSG,
                 "Job Application for Job %s".formatted(jobId)));
 
-        var currentUserIsAdmin = currentUserSession.hasRole(ADMIN);
-
-        var currentUserIsPetSitter = currentUserSession.hasRole(PET_SITTER);
-
         var jobApplicationDtoUserId = jobApplicationDto.getUserId();
 
-        var currentUserIsPetSitterAndIsJobApplicationDtoUserId = currentUserIsPetSitter &&
-            currentUserSession.hasId(jobApplicationDtoUserId);
+        var jobApplicationOwnerId =
+                jobApplicationDtoUserId != null ? jobApplicationDtoUserId : currentSession.userId();
 
-        var userId = jobApplicationDtoUserId != null ? jobApplicationDtoUserId : currentUserSession.userId();
+        var permission = currentSession.getPermission(CREATE, JOB_APPLICATION,
 
-        if ( !(currentUserIsAdmin ||
-               (currentUserIsPetSitter && jobApplicationDtoUserId == null) ||
-               currentUserIsPetSitterAndIsJobApplicationDtoUserId) ) {
+            Map.of(
+                JOB_APPLICATION_OWNER_ID_ATT, jobApplicationOwnerId,
+                JOB_APPLICATION_DTO_ATT, jobApplicationDto)
+        );
+
+        if (permission.isDenied()) {
+
+            var optionalReason = permission.getReason();
 
             throw new ForbiddenException(ForbiddenException.CREATE_MSG,
-                "Job Application for Job %s and User %s".formatted(jobId, userId));
+                optionalReason.orElse("Job Application for Job %s and User %s"
+                    .formatted(jobId, jobApplicationOwnerId)));
         }
 
         var invalidArgumentList = new ArrayList<InvalidArgument>();
-
-        var jobApplicationDtoId = jobApplicationDto.getId();
-
-        if (jobApplicationDtoId != null) {
-
-            invalidArgumentList.add(new InvalidArgument("jobApplication", "id",
-                "cannot create Job Application with an ID (%s)".formatted(jobApplicationDtoId)));
-        }
-
-        var jobApplicationDtoStatus = jobApplicationDto.getStatus();
-
-        if (jobApplicationDtoStatus == null) {
-
-            invalidArgumentList.add(new InvalidArgument("jobApplication", "status",
-                InvalidArgument.NULL_VALUE_MSG));
-        }
-        else if (!currentUserIsAdmin && !jobApplicationDtoStatus.equals(PENDING)) {
-
-            invalidArgumentList.add(new InvalidArgument("jobApplication", "status",
-                "Job Application status must equal %s".formatted(PENDING)));
-        }
-
-        if (currentUserIsAdmin && !currentUserIsPetSitter) {
-
-            if (jobApplicationDtoUserId == null) {
-
-                invalidArgumentList.add(new InvalidArgument("jobApplication", "user_id",
-                    "creating Job Application as administrator, user ID (Pet Sitter) must be specified"));
-            }
-            else if (!userService.existsByIdAndRole(jobApplicationDtoUserId, PET_SITTER)) {
-                throw new NotFoundException("Pet Sitter with ID %s".formatted(jobApplicationDtoUserId));
-            }
-        }
 
         var jobApplicationDtoJobId = jobApplicationDto.getJobId();
 
@@ -631,124 +587,82 @@ class JobServiceInternalImpl implements JobServiceInternal {
 
             invalidArgumentList.add(new InvalidArgument("jobApplication", "job_id",
                 "Job ID mismatch. If specified, Job Application Job ID must equal %s. Value specified %s"
-                    .formatted(jobApplicationDtoJobId, jobId)));
+                    .formatted(jobId, jobApplicationDtoJobId)));
+        }
+
+        if (jobApplicationDtoUserId != null &&
+            !userService.existsByIdAndRole(jobApplicationDtoUserId, PET_SITTER)) {
+
+            throw new NotFoundException("Pet Sitter with ID %s".formatted(jobApplicationDtoUserId));
         }
 
         var jobOwnerId = jobRepository.findJobOwnerIdById(jobId)
             .orElseThrow(() -> new NotFoundException("Job %s".formatted(jobId)));
 
-        if (jobOwnerId.equals(userId)) {
+        if (jobOwnerId.equals(jobApplicationOwnerId)) {
 
             invalidArgumentList.add(new InvalidArgument("jobApplication",
-                "Job applicant cannot be Job creator, Applicant %s Job %s".formatted(userId, jobId)));
+                "Job applicant cannot be Job creator, Applicant %s Job %s".formatted(jobApplicationOwnerId, jobId)));
         }
 
-        if (jobRepository.applicationExistsByJobIdAndOwnerId(jobId, userId)) {
+        if (jobRepository.applicationExistsByJobIdAndOwnerId(jobId, jobApplicationOwnerId)) {
 
             invalidArgumentList.add(new InvalidArgument("jobApplication",
                 "Job applicant cannot have more than one application for the same job. Applicant %s Job %s"
-                    .formatted(userId, jobId)));
+                    .formatted(jobApplicationOwnerId, jobId)));
         }
 
         if (!invalidArgumentList.isEmpty()) {
             throw new InvalidArgumentException(invalidArgumentList);
         }
 
-        return jobRepository.saveJobApplication(userId, jobId, jobApplicationDto).getId();
+        return jobRepository.saveJobApplication(jobApplicationOwnerId, jobId, jobApplicationDto).getId();
     }
 
     @Override
     @Transactional
     public JobApplicationDto modifyJobApplicationWithId(UUID jobApplicationId, JobApplicationDto jobApplicationDto) {
 
-        var currentUserSession = sessionService.getCurrentSession()
+        var currentSession = sessionService.getCurrentSession()
             .orElseThrow(() -> new UnauthorizedException(UnauthorizedException.MODIFY_MSG,
                 "Job Application %s".formatted(jobApplicationId)));
-
-        var currentUserIsAdmin = currentUserSession.hasRole(ADMIN);
 
         var jobApplication = jobRepository.findApplicationWithOwnerAndJobById(jobApplicationId)
             .orElseThrow(() -> new NotFoundException("Job Application %s".formatted(jobApplicationId)));
 
-        var jobApplicationOwnerId = jobApplication.getApplicationOwner().getId();
+        var permission = currentSession.getPermission(MODIFY, JOB_APPLICATION,
 
-        var jobApplicationJob = jobApplication.getApplicationJob();
+            Map.of(
+                JOB_APPLICATION_ATT, jobApplication,
+                JOB_APPLICATION_DTO_ATT, jobApplicationDto)
+        );
 
-        var currentUserIsPetSitterAndIsJobApplicationOwner =
-            currentUserSession.hasRoleAndId(PET_SITTER, jobApplicationOwnerId);
+        if (permission.isDenied()) {
 
-        var currentUserIsPetOwnerAndIsJobApplicationJobOwner =
-            currentUserSession.hasRoleAndId(PET_OWNER, jobApplicationJob.getJobOwner().getId());
-
-        if ( !(currentUserIsAdmin ||
-               currentUserIsPetSitterAndIsJobApplicationOwner ||
-               currentUserIsPetOwnerAndIsJobApplicationJobOwner) ) {
+            var optionalReason = permission.getReason();
 
             throw new ForbiddenException(ForbiddenException.MODIFY_MSG,
-                "Job Application %s".formatted(jobApplicationId));
-        }
-
-        var jobApplicationDtoId = jobApplicationDto.getId();
-
-        if (jobApplicationDtoId != null && !jobApplicationDtoId.equals(jobApplicationId)) {
-
-            throw new ForbiddenException(ForbiddenException.MODIFY_MSG,
-                "Job Application ID %s".formatted(jobApplicationId));
-        }
-
-        var jobApplicationDtoStatus = jobApplicationDto.getStatus();
-
-        if (jobApplicationDtoStatus != null && !currentUserIsAdmin && currentUserIsPetSitterAndIsJobApplicationOwner) {
-
-            switch (jobApplicationDtoStatus) {
-                case PENDING: case WITHDRAWN:
-                    break;
-                default:
-                    throw new ForbiddenException(ForbiddenException.INVALID_VALUE_MSG,
-                        "modifying Job Application as Pet Sitter, status must be in (%s, %s)"
-                            .formatted(PENDING, WITHDRAWN));
-            }
-        }
-
-        if (jobApplicationDtoStatus != null && !currentUserIsAdmin &&
-            currentUserIsPetOwnerAndIsJobApplicationJobOwner) {
-
-            switch (jobApplicationDtoStatus) {
-                case ACCEPTED: case REJECTED: case PENDING:
-                    break;
-                default:
-                    throw new ForbiddenException(ForbiddenException.INVALID_VALUE_MSG,
-                        "modifying Job Application as Pet Owner, status must be in (%s, %s, %s)"
-                            .formatted(ACCEPTED, REJECTED, PENDING));
-            }
+                optionalReason.orElse("Job Application %s".formatted(jobApplicationId)));
         }
 
         var jobApplicationDtoUserId = jobApplicationDto.getUserId();
+        var jobApplicationOwnerId = jobApplication.getApplicationOwner().getId();
 
-        if (jobApplicationDtoUserId != null && !jobApplicationDtoUserId.equals(jobApplicationOwnerId)) {
+        if (jobApplicationDtoUserId != null &&
+            !jobApplicationDtoUserId.equals(jobApplicationOwnerId) &&
+            !userService.existsByIdAndRole(jobApplicationDtoUserId, PET_SITTER)) {
 
-            if (!currentUserIsAdmin) {
-                throw new ForbiddenException(ForbiddenException.MODIFY_MSG,
-                    "Job Application user ID. Job Application %s".formatted(jobApplicationId));
-            }
-
-            if (!userService.existsByIdAndRole(jobApplicationDtoUserId, PET_SITTER)) {
-                throw new NotFoundException("Pet Sitter with ID %s".formatted(jobApplicationDtoUserId));
-            }
+            throw new NotFoundException("Pet Sitter with ID %s".formatted(jobApplicationDtoUserId));
         }
 
         var jobApplicationDtoJobId = jobApplicationDto.getJobId();
+        var jobApplicationJobId = jobApplication.getApplicationJob().getId();
 
-        if (jobApplicationDtoJobId != null && !jobApplicationDtoJobId.equals(jobApplicationJob.getId())) {
+        if(jobApplicationDtoJobId != null &&
+           !jobApplicationDtoJobId.equals(jobApplicationJobId) &&
+           !jobRepository.existsById(jobApplicationDtoJobId)) {
 
-            if (!currentUserIsAdmin) {
-                throw new ForbiddenException(ForbiddenException.MODIFY_MSG,
-                    "Job Application Job ID. Job Application %s".formatted(jobApplicationId));
-            }
-
-            if (!jobRepository.existsById(jobApplicationDtoJobId)) {
-                throw new NotFoundException("Job %s".formatted(jobApplicationDtoJobId));
-            }
+            throw new NotFoundException("Job %s".formatted(jobApplicationDtoJobId));
         }
 
         return jobRepository.updateJobApplicationFromDto(jobApplication, jobApplicationDto);

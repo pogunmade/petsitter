@@ -93,16 +93,16 @@ class JobRepository {
         return jpaJobRepository.findWithJobOwnerById(jobId);
     }
 
-    JobDto save(UUID userId, JobDto jobDto) {
+    JobDto save(UUID jobOwnerId, JobDto jobDto) {
 
         return jobMapper.toJobDto(jpaJobRepository.save(jobMapper.toJob(jobDto,
-            userInfrastructureService.getReferenceById(userId))));
+            userInfrastructureService.getReferenceById(jobOwnerId))));
     }
 
-    JobApplicationDto saveJobApplication(UUID userId, UUID jobId, JobApplicationDto jobApplicationDto) {
+    JobApplicationDto saveJobApplication(UUID jobApplicationOwnerId, UUID jobId, JobApplicationDto jobApplicationDto) {
 
         var jobApplication = jobApplicationMapper.toJobApplication(jobApplicationDto,
-            userInfrastructureService.getReferenceById(userId),
+            userInfrastructureService.getReferenceById(jobApplicationOwnerId),
             jpaJobRepository.getReferenceById(jobId));
 
         return jobApplicationMapper.toJobApplicationDto(jpaJobApplicationRepository.save(jobApplication));

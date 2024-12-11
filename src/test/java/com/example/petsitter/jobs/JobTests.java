@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -313,9 +314,9 @@ class JobTests {
     class WithPetOwnerSessionTests {
 
         @Test
-        void givenValidSessionWhenCreateJobWithIdThenInvalidArgumentException() {
+        void givenValidSessionWhenCreateJobWithIdThenForbiddenException() {
 
-            var invalidArgumentException = assertThrowsExactly(InvalidArgumentException.class, () -> {
+            var forbiddenException = assertThrowsExactly(ForbiddenException.class, () -> {
 
                 jobService.createJob(
 
@@ -332,8 +333,11 @@ class JobTests {
                 entityManager.flush();
             });
 
-            assertTrue(invalidArgumentException.contains("job", "id",
-                "cannot create Job with an ID (%s)".formatted(RANDOM_UUID)));
+            assertEquals(
+                ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG,
+                    "Job with ID %s".formatted(RANDOM_UUID)),
+                forbiddenException.getMessage()
+            );
         }
 
         @Test
@@ -1084,9 +1088,9 @@ class JobTests {
             );
 
             assertEquals(
-                ForbiddenException.messageValueOf(ForbiddenException.INVALID_VALUE_MSG,
-                    "modifying Job Application as Pet Owner, status must be in (%s, %s, %s)"
-                        .formatted(ACCEPTED, REJECTED, PENDING)),
+                ForbiddenException.messageValueOf(ForbiddenException.MODIFY_MSG,
+                    "modifying Job Application as Pet Owner, status must be in %s"
+                        .formatted(List.of(ACCEPTED, PENDING, REJECTED))),
                 forbiddenException.getMessage()
             );
         }
@@ -1325,7 +1329,7 @@ class JobTests {
         }
 
         @Test
-        void givenValidSessionWhenCreateJobApplicationWithIdThenInvalidArgumentException() {
+        void givenValidSessionWhenCreateJobApplicationWithIdThenForbiddenException() {
 
             var jobDto = jobRepository.save(petOwnerDto.getId(),
 
@@ -1339,7 +1343,7 @@ class JobTests {
 
             entityManager.flush();
 
-            var invalidArgumentException = assertThrowsExactly(InvalidArgumentException.class, () ->
+            var forbiddenException = assertThrowsExactly(ForbiddenException.class, () ->
 
                 jobService.createJobApplication(jobDto.getId(),
 
@@ -1350,12 +1354,15 @@ class JobTests {
                 )
             );
 
-            assertTrue(invalidArgumentException.contains("jobApplication", "id",
-                "cannot create Job Application with an ID (%s)".formatted(RANDOM_UUID)));
+            assertEquals(
+                ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG,
+                    "Job Application with ID %s".formatted(RANDOM_UUID)),
+                forbiddenException.getMessage()
+            );
         }
 
         @Test
-        void givenValidSessionWhenCreateApplicationWithNullStatusThenInvalidArgumentException() {
+        void givenValidSessionWhenCreateApplicationWithNullStatusThenForbiddenException() {
 
             var jobDto = jobRepository.save(petOwnerDto.getId(),
 
@@ -1369,7 +1376,7 @@ class JobTests {
 
             entityManager.flush();
 
-            var invalidArgumentException = assertThrowsExactly(InvalidArgumentException.class, () ->
+            var forbiddenException = assertThrowsExactly(ForbiddenException.class, () ->
 
                 jobService.createJobApplication(jobDto.getId(),
 
@@ -1379,12 +1386,15 @@ class JobTests {
                 )
             );
 
-            assertTrue(invalidArgumentException.contains("jobApplication", "status",
-                InvalidArgument.NULL_VALUE_MSG));
+            assertEquals(
+                ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG,
+                    "Job Application status must be specified"),
+                forbiddenException.getMessage()
+            );
         }
 
         @Test
-        void givenPetSitterSessionWhenCreateApplicationWithStatusNotEqualToPendingThenInvalidArgumentException() {
+        void givenPetSitterSessionWhenCreateApplicationWithStatusNotEqualToPendingThenForbiddenException() {
 
             var jobDto = jobRepository.save(petOwnerDto.getId(),
 
@@ -1398,7 +1408,7 @@ class JobTests {
 
             entityManager.flush();
 
-            var invalidArgumentException = assertThrowsExactly(InvalidArgumentException.class, () ->
+            var forbiddenException = assertThrowsExactly(ForbiddenException.class, () ->
 
                 jobService.createJobApplication(jobDto.getId(),
 
@@ -1408,8 +1418,11 @@ class JobTests {
                 )
             );
 
-            assertTrue(invalidArgumentException.contains("jobApplication", "status",
-                "Job Application status must equal %s".formatted(PENDING)));
+            assertEquals(
+                ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG,
+                    "Job Application status must equal %s".formatted(PENDING)),
+                forbiddenException.getMessage()
+            );
         }
 
         @Test
@@ -1441,7 +1454,7 @@ class JobTests {
 
             assertTrue(invalidArgumentException.contains("jobApplication", "job_id",
                 "Job ID mismatch. If specified, Job Application Job ID must equal %s. Value specified %s"
-                    .formatted(RANDOM_UUID, jobDtoId)));
+                    .formatted(jobDtoId, RANDOM_UUID)));
         }
 
         @Test
@@ -1590,10 +1603,12 @@ class JobTests {
                         .build())
             );
 
+            var validPetSitterStatusList = List.of(PENDING, WITHDRAWN);
+
             assertEquals(
-                ForbiddenException.messageValueOf(ForbiddenException.INVALID_VALUE_MSG,
-                    "modifying Job Application as Pet Sitter, status must be in (%s, %s)"
-                        .formatted(PENDING, WITHDRAWN)),
+                ForbiddenException.messageValueOf(ForbiddenException.MODIFY_MSG,
+                    "modifying Job Application as Pet Sitter, status must be in %s"
+                        .formatted(validPetSitterStatusList)),
                 forbiddenException.getMessage()
             );
 
@@ -1607,9 +1622,9 @@ class JobTests {
             );
 
             assertEquals(
-                ForbiddenException.messageValueOf(ForbiddenException.INVALID_VALUE_MSG,
-                    "modifying Job Application as Pet Sitter, status must be in (%s, %s)"
-                        .formatted(PENDING, WITHDRAWN)),
+                ForbiddenException.messageValueOf(ForbiddenException.MODIFY_MSG,
+                    "modifying Job Application as Pet Sitter, status must be in %s"
+                        .formatted(validPetSitterStatusList)),
                 forbiddenException.getMessage()
             );
         }
@@ -1674,9 +1689,9 @@ class JobTests {
         }
 
         @Test
-        void givenAdminSessionWhenCreateJobAndCreatorUserIsNullThenInvalidArgumentException() {
+        void givenAdminSessionWhenCreateJobAndCreatorUserIsNullThenForbiddenException() {
 
-            var invalidArgumentException = assertThrowsExactly(InvalidArgumentException.class, () -> {
+            var forbiddenException = assertThrowsExactly(ForbiddenException.class, () -> {
 
                 jobService.createJob(
 
@@ -1691,8 +1706,11 @@ class JobTests {
                 entityManager.flush();
             });
 
-            assertTrue(invalidArgumentException.contains("job", "creator_user_id",
-                "creating Job as administrator, creator user ID (Pet Owner) must be specified"));
+            assertEquals(
+                ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG,
+                    "creating Job as administrator, creator user ID (Pet Owner) must be specified"),
+                forbiddenException.getMessage()
+            );
         }
 
         @Test
@@ -1954,7 +1972,7 @@ class JobTests {
         }
 
         @Test
-        void givenAdminSessionWhenCreateApplicationAndUserIsNullThenInvalidArgumentException() {
+        void givenAdminSessionWhenCreateApplicationAndUserIsNullThenForbiddenException() {
 
             var jobDtoId = jobService.createJob(
 
@@ -1969,7 +1987,7 @@ class JobTests {
 
             entityManager.flush();
 
-            var invalidArgumentException = assertThrowsExactly(InvalidArgumentException.class, () ->
+            var forbiddenException = assertThrowsExactly(ForbiddenException.class, () ->
 
                 jobService.createJobApplication(jobDtoId,
 
@@ -1978,8 +1996,11 @@ class JobTests {
                         .build())
             );
 
-            assertTrue(invalidArgumentException.contains("jobApplication", "user_id",
-                "creating Job Application as administrator, user ID (Pet Sitter) must be specified"));
+            assertEquals(
+                ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG,
+                    "creating Job Application as administrator, user ID (Pet Sitter) must be specified"),
+                forbiddenException.getMessage()
+            );
         }
 
         @Test

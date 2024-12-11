@@ -16,7 +16,7 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "Job_Applications")
 @Data
-class JobApplication {
+public class JobApplication {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -46,5 +46,5 @@ class JobApplication {
     @Setter(AccessLevel.NONE)
     private AuditMetaData auditMetaData = new AuditMetaData();
 
-    enum JobApplicationStatus {PENDING, ACCEPTED, REJECTED, WITHDRAWN}
+    public enum JobApplicationStatus {PENDING, ACCEPTED, REJECTED, WITHDRAWN}
 }

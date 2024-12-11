@@ -47,7 +47,7 @@ class UserTests {
     private static final UUID RANDOM_UUID = UUID.randomUUID();
     private static final Email INVALID_EMAIL = new Email("qwerty");
     private static final String VALID_PASSWORD = "1Password";
-    private static final String INVALID_PASSWORD = "password";
+//    private static final String INVALID_PASSWORD = "password";
     private static final String VALID_FULL_NAME = "Full Name";
 
     private final UserServiceInternal userService;
@@ -79,16 +79,15 @@ class UserTests {
         });
 
         assertEquals(
-            ForbiddenException.messageValueOf(ForbiddenException.INVALID_VALUE_MSG,
-                "cannot register User with %s role".formatted(ADMIN)),
+            ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG, "User with %s role".formatted(ADMIN)),
             forbiddenException.getMessage()
         );
     }
 
     @Test
-    void whenRegisterUserWithIdThenInvalidArgumentException() {
+    void whenRegisterUserWithIdThenForbiddenException() {
 
-        var invalidArgumentException = assertThrowsExactly(InvalidArgumentException.class, () -> {
+        var forbiddenException = assertThrowsExactly(ForbiddenException.class, () -> {
 
             userService.registerUser(
 
@@ -104,8 +103,10 @@ class UserTests {
             entityManager.flush();
         });
 
-        assertTrue(invalidArgumentException.contains("user", "id",
-            "cannot register User with an ID (%s)".formatted(RANDOM_UUID)));
+        assertEquals(
+            ForbiddenException.messageValueOf(ForbiddenException.CREATE_MSG, "User with ID %s".formatted(RANDOM_UUID)),
+            forbiddenException.getMessage()
+        );
     }
 
     @Test
