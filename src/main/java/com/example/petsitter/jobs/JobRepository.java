@@ -110,21 +110,15 @@ class JobRepository {
 
     JobApplicationDto updateJobApplicationFromDto(JobApplication jobApplication, JobApplicationDto jobApplicationDto) {
 
-        User applicationOwner = null;
-
         var userId = jobApplicationDto.getUserId();
 
-        if (userId != null && userId != jobApplication.getApplicationOwner().getId()) {
-            applicationOwner = userInfrastructureService.getReferenceById(userId);
-        }
-
-        Job applicationJob = null;
+        User applicationOwner = userId != null && userId != jobApplication.getApplicationOwner().getId() ?
+            userInfrastructureService.getReferenceById(userId) : null;
 
         var jobId = jobApplicationDto.getJobId();
 
-        if (jobId != null && jobId != jobApplication.getApplicationJob().getId()) {
-            applicationJob = jpaJobRepository.getReferenceById(jobId);
-        }
+        Job applicationJob = jobId != null && jobId != jobApplication.getApplicationJob().getId() ?
+            jpaJobRepository.getReferenceById(jobId) : null;
 
         return jobApplicationMapper.toJobApplicationDto(jobApplicationMapper
             .updateJobApplicationFromDto(jobApplication, jobApplicationDto, applicationOwner, applicationJob));
@@ -132,13 +126,10 @@ class JobRepository {
 
     JobDto updateJobFromDto(Job job, JobDto jobDto) {
 
-        User jobOwner = null;
-
         var creatorUserId = jobDto.getCreatorUserId();
 
-        if (creatorUserId != null && creatorUserId != job.getJobOwner().getId()) {
-            jobOwner = userInfrastructureService.getReferenceById(creatorUserId);
-        }
+        User jobOwner = creatorUserId != null && creatorUserId != job.getJobOwner().getId() ?
+            userInfrastructureService.getReferenceById(creatorUserId) : null;
 
         return jobMapper.toJobDto(jobMapper.updateJobFromDto(job, jobDto, jobOwner));
     }

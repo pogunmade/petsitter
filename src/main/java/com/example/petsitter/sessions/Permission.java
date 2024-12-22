@@ -4,8 +4,8 @@ import java.util.Optional;
 
 public class Permission {
 
-    public static final Permission IS_GRANTED = new Permission(Decision.GRANTED);
-    public static final Permission IS_DENIED = new Permission(Decision.DENIED);
+    static final Permission IS_GRANTED = new Permission(Decision.GRANTED);
+    static final Permission IS_DENIED = new Permission(Decision.DENIED);
 
     private final Decision decision;
 
