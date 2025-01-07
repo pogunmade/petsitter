@@ -1,28 +1,23 @@
 spring:
 
+  config:
+    import: "optional:configtree:/run/secrets/"
+
   application:
     name: PetSitter
 
   datasource:
-    url: jdbc:h2:mem:pet-sitter-db
-    driverClassName: org.h2.Driver
-    username: sa
-    password: password
+    url: jdbc:postgresql://db:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${postgres-password}
 
   jpa:
     hibernate:
       ddl-auto: create-drop
 
-  h2:
-    console:
-      enabled: true
-#      settings:
-#        web-allow-others: true
-
   jackson:
     default-property-inclusion: non_null
     property-naming-strategy: SNAKE_CASE
-
 
 springdoc:
 
