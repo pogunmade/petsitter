@@ -74,7 +74,6 @@ class SessionConfig {
 
         http
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(toH2Console()).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api-docs.yaml", "/api-docs/**", "/swagger-ui/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/users", "/sessions").permitAll()
                 .anyRequest().authenticated()
