@@ -44,7 +44,7 @@ public class PetSitterApplication {
                 entityManager.createNativeQuery("""
                         INSERT INTO user_roles (user_id, roles)
                              VALUES (?,?)""")
-                    .setParameter(1, "cc085f34-a338-44bb-aeb0-557ee724d7cd")
+                    .setParameter(1, UUID.fromString("cc085f34-a338-44bb-aeb0-557ee724d7cd"))
                     .setParameter(2, ADMIN.name())
                     .executeUpdate();
 
@@ -61,7 +61,7 @@ public class PetSitterApplication {
                 entityManager.createNativeQuery("""
                         INSERT INTO user_roles (user_id, roles)
                              VALUES (?,?)""")
-                    .setParameter(1, "a96056bc-c7bc-4d96-a5f5-ed6510293731")
+                    .setParameter(1, UUID.fromString("a96056bc-c7bc-4d96-a5f5-ed6510293731"))
                     .setParameter(2, PET_OWNER.name())
                     .executeUpdate();
 
@@ -78,7 +78,7 @@ public class PetSitterApplication {
                 entityManager.createNativeQuery("""
                         INSERT INTO user_roles (user_id, roles)
                              VALUES (?,?)""")
-                    .setParameter(1, "9fb1ceaa-277e-43c3-9cff-af24ef0a8e99")
+                    .setParameter(1, UUID.fromString("9fb1ceaa-277e-43c3-9cff-af24ef0a8e99"))
                     .setParameter(2, PET_SITTER.name())
                     .executeUpdate();
 

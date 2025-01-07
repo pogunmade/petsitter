@@ -21,6 +21,7 @@ From the project root directory
 ```shell
 mvn spring-boot:run
 ```
+If docker is preferred see containerization branch.
 
 ### Swagger UI
 From your browser

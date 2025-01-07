@@ -4,16 +4,12 @@ import java.util.Optional;
 
 public class Permission {
 
-    static final Permission IS_GRANTED = new Permission(Decision.GRANTED);
-    static final Permission IS_DENIED = new Permission(Decision.DENIED);
+    static final Permission IS_GRANTED = new Permission(Decision.GRANTED, null);
+    static final Permission IS_DENIED = new Permission(Decision.DENIED, null);
 
     private final Decision decision;
 
     private final String reason;
-
-    private Permission(Decision decision) {
-        this(decision, null);
-    }
 
     Permission(Decision decision, String reason) {
         this.decision = decision;
