@@ -13,15 +13,12 @@ enterprise grade application. The implementation reflects this. For further back
 __Disclaimer:__ there is no association with the book or its authors. Any errors are entirely self-contained.
 
 ### Minimum requirements
-- JDK 17 or later
-- Apache Maven 3.6.3 or later
+- Docker 27.4.1 or later
 
-_(If Docker is preferred see containerization branch.)_
-
-### Run
+### Start
 From the project root directory
 ```shell
-mvn spring-boot:run
+sudo docker compose up
 ```
 
 ### Swagger UI
@@ -50,15 +47,31 @@ From your browser
 localhost:8080/api-docs.yaml
 ```
 
-### H2 Console
+### Postgres pgAdmin
 From your browser
 ```
-localhost:8080/h2-console
+localhost:5050
 ```
-- Driver Class: org.h2.Driver
-- JDBC URL: jdbc:h2:mem:pet-sitter-db
-- User Name: sa
+
+Login
+- Email Address: admin@example.com
 - Password: password
+
+Add database
+- Right-click "Servers" in top left corner and select "Register" -> "Server"
+- Name the Server
+- Select the "Connection" tab and add the following:
+  - Host name/address: db
+  - Port: 5432
+  - Maintenance database: pet-sitter
+  - Username: pet-sitter-backend
+  - Password: password
+
+### Stop
+From the project root directory
+```shell
+sudo docker compose down
+```
 
 ### License
 This demo is released under the MIT license.

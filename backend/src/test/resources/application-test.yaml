@@ -1,0 +1,7 @@
+spring:
+
+  datasource:
+    url: jdbc:h2:mem:pet-sitter-db;MODE=PostgreSQL;
+    driverClassName: org.h2.Driver
+    username: pet-sitter-backend
+    password: password
