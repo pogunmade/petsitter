@@ -16,12 +16,13 @@ __Disclaimer:__ there is no association with the book or its authors. Any errors
 - JDK 17 or later
 - Apache Maven 3.6.3 or later
 
+_(If Docker is preferred see containerization branch.)_
+
 ### Run
 From the project root directory
 ```shell
 mvn spring-boot:run
 ```
-If docker is preferred see containerization branch.
 
 ### Swagger UI
 From your browser
