@@ -7,7 +7,6 @@ import com.example.petsitter.users.UserTestConfig;
 import com.example.petsitter.users.UserTestUtils;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -15,7 +14,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestConstructor;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
@@ -24,7 +22,6 @@ import static com.example.petsitter.sessions.SessionTestConfig.PET_OWNER_EMAIL;
 import static com.example.petsitter.users.User.UserRole.PET_OWNER;
 import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 @Import({JobTestConfig.class, UserTestConfig.class})
