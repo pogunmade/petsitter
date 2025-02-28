@@ -31,10 +31,15 @@ public class PetSitterApplication {
             @Transactional
             public void run(String... args) {
 
+                var aliceTheAdminUuid = UUID.fromString("cc085f34-a338-44bb-aeb0-557ee724d7cd");
+                var owenThePetOwnerUuid = UUID.fromString("a96056bc-c7bc-4d96-a5f5-ed6510293731");
+                var sallyThePetSitterUuid = UUID.fromString("9fb1ceaa-277e-43c3-9cff-af24ef0a8e99");
+                var jobUuid = UUID.fromString("fdafe54b-4614-4660-b29d-f3ef5a28a409");
+
                 entityManager.createNativeQuery("""
                         INSERT INTO users (id, email, password, full_name, version)
                         	 VALUES (?,?,?,?,?)""")
-                    .setParameter(1, UUID.fromString("cc085f34-a338-44bb-aeb0-557ee724d7cd"))
+                    .setParameter(1, aliceTheAdminUuid)
                     .setParameter(2, "admin@example.com")
                     .setParameter(3, "{bcrypt}$2a$10$16L4qAUqBZKqfVmmkbTtFecqp5nRnw80DYB1vTgoQB8gVu7XUrkEe")
                     .setParameter(4, "Alice The Admin")
@@ -44,14 +49,14 @@ public class PetSitterApplication {
                 entityManager.createNativeQuery("""
                         INSERT INTO user_roles (user_id, roles)
                              VALUES (?,?)""")
-                    .setParameter(1, UUID.fromString("cc085f34-a338-44bb-aeb0-557ee724d7cd"))
+                    .setParameter(1, aliceTheAdminUuid)
                     .setParameter(2, ADMIN.name())
                     .executeUpdate();
 
                 entityManager.createNativeQuery("""
                         INSERT INTO users (id, email, password, full_name, version)
                           	 VALUES (?,?,?,?,?)""")
-                    .setParameter(1, UUID.fromString("a96056bc-c7bc-4d96-a5f5-ed6510293731"))
+                    .setParameter(1, owenThePetOwnerUuid)
                     .setParameter(2, "pet-owner@example.com")
                     .setParameter(3, "{bcrypt}$2a$10$NmzKr5PKbBwc6aNwrlq5IOjfoGwvubZ57B9HL2hjDekBLYcTwW0ey")
                     .setParameter(4, "Owen The Pet Owner")
@@ -61,14 +66,14 @@ public class PetSitterApplication {
                 entityManager.createNativeQuery("""
                         INSERT INTO user_roles (user_id, roles)
                              VALUES (?,?)""")
-                    .setParameter(1, UUID.fromString("a96056bc-c7bc-4d96-a5f5-ed6510293731"))
+                    .setParameter(1, owenThePetOwnerUuid)
                     .setParameter(2, PET_OWNER.name())
                     .executeUpdate();
 
                 entityManager.createNativeQuery("""
                         INSERT INTO users (id, email, password, full_name, version)
                         	 VALUES (?,?,?,?,?)""")
-                    .setParameter(1, UUID.fromString("9fb1ceaa-277e-43c3-9cff-af24ef0a8e99"))
+                    .setParameter(1, sallyThePetSitterUuid)
                     .setParameter(2, "pet-sitter@example.com")
                     .setParameter(3, "{bcrypt}$2a$10$dKanbl3YZUHJOCYvZGTwA.A6VkXszaddPn8ExqEvrWbL/Y8ik6Df.")
                     .setParameter(4, "Sally The Pet Sitter")
@@ -78,7 +83,7 @@ public class PetSitterApplication {
                 entityManager.createNativeQuery("""
                         INSERT INTO user_roles (user_id, roles)
                              VALUES (?,?)""")
-                    .setParameter(1, UUID.fromString("9fb1ceaa-277e-43c3-9cff-af24ef0a8e99"))
+                    .setParameter(1, sallyThePetSitterUuid)
                     .setParameter(2, PET_SITTER.name())
                     .executeUpdate();
 
@@ -87,7 +92,7 @@ public class PetSitterApplication {
                 entityManager.createNativeQuery("""
                         INSERT INTO jobs (id, start_time, end_time, activity, name, age, breed, size, job_owner_id, version)
                         	 VALUES (?,?,?,?,?,?,?,?,?,?)""")
-                    .setParameter(1, UUID.fromString("fdafe54b-4614-4660-b29d-f3ef5a28a409"))
+                    .setParameter(1, jobUuid)
                     .setParameter(2, startTime)
                     .setParameter(3, startTime.plusHours(3))
                     .setParameter(4, "Walk, House sit")
@@ -95,7 +100,7 @@ public class PetSitterApplication {
                     .setParameter(6, 8)
                     .setParameter(7, "Irish Setter")
                     .setParameter(8, "26kg")
-                    .setParameter(9, UUID.fromString("a96056bc-c7bc-4d96-a5f5-ed6510293731"))
+                    .setParameter(9, owenThePetOwnerUuid)
                     .setParameter(10, 0)
                     .executeUpdate();
 
@@ -104,8 +109,8 @@ public class PetSitterApplication {
                                                       version)
                              VALUES (?,?,?,?,?)""")
                     .setParameter(1, UUID.fromString("eee6b21a-bd39-4ab8-b369-a30140eb3ee1"))
-                    .setParameter(2, UUID.fromString("fdafe54b-4614-4660-b29d-f3ef5a28a409"))
-                    .setParameter(3, UUID.fromString("9fb1ceaa-277e-43c3-9cff-af24ef0a8e99"))
+                    .setParameter(2, jobUuid)
+                    .setParameter(3, sallyThePetSitterUuid)
                     .setParameter(4, "PENDING")
                     .setParameter(5, 0)
                     .executeUpdate();
