@@ -102,11 +102,11 @@ class ExceptionHandlerAdvice {
         problemDetail.setType(ServletUriComponentsBuilder.fromCurrentContextPath()
             .path(resolutionPath).build().toUri());
 
-        problemDetail.setProperty("timestamp", LocalDateTime.now());
-
         if (properties != null) {
             problemDetail.setProperties(properties);
         }
+
+        problemDetail.setProperty("timestamp", LocalDateTime.now());
 
         return problemDetail;
     }
