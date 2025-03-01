@@ -104,6 +104,8 @@ paths:
       responses:
         "201":
           description: Created
+          x-microcks-refs:
+            - validUser
           headers:
             Location:
               description: User URI
@@ -301,6 +303,8 @@ paths:
       responses:
         "204":
           description: No Content
+          x-microcks-refs:
+            - validUser
         "401":
           description: Unauthorized
           content:
@@ -483,6 +487,8 @@ paths:
       responses:
         "201":
           description: Created
+          x-microcks-refs:
+            - validJob
           headers:
             Location:
               description: Job URI
@@ -512,18 +518,18 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-        #              examples:
-        #                unauthorized:
-        #                  $ref: "#/components/examples/problemDetail"
+#              examples:
+#                unauthorized:
+#                  $ref: "#/components/examples/problemDetail"
         "403":
           description: Forbidden
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-    #              examples:
-    #                forbidden:
-    #                  $ref: "#/components/examples/problemDetail"
+#              examples:
+#                forbidden:
+#                  $ref: "#/components/examples/problemDetail"
     get:
       tags:
         - Jobs
@@ -566,18 +572,18 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-        #              examples:
-        #                unauthorized:
-        #                  $ref: "#/components/examples/problemDetail"
+#              examples:
+#                unauthorized:
+#                  $ref: "#/components/examples/problemDetail"
         "403":
           description: Forbidden
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-  #              examples:
-  #                forbidden:
-  #                  $ref: "#/components/examples/problemDetail"
+#              examples:
+#                forbidden:
+#                  $ref: "#/components/examples/problemDetail"
   /jobs/{uuid}:
     get:
       tags:
@@ -759,6 +765,8 @@ paths:
       responses:
         "204":
           description: No Content
+          x-microcks-refs:
+            - validJob
         "401":
           description: Unauthorized
           content:
@@ -883,6 +891,8 @@ paths:
       responses:
         "201":
           description: Created
+          x-microcks-refs:
+            - validJobApplication
           headers:
             Location:
               description: Job Application URI

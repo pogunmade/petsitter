@@ -6,6 +6,7 @@ import com.example.petsitter.users.UserDto;
 import com.example.petsitter.users.UserTestConfig;
 import com.example.petsitter.users.UserTestUtils;
 import lombok.RequiredArgsConstructor;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -22,12 +23,13 @@ import static com.example.petsitter.sessions.SessionTestConfig.PET_OWNER_EMAIL;
 import static com.example.petsitter.users.User.UserRole.PET_OWNER;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import({JobTestConfig.class, UserTestConfig.class})
 @RequiredArgsConstructor
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 @Transactional
+@Order(1)
 class SessionTests {
 
     private final static String JWT_CLAIMS_ROLES_KEY = "scope";

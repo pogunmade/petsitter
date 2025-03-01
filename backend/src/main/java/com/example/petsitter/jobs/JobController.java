@@ -46,20 +46,21 @@ class JobController {
         return ResponseEntity.created(location).build();
     }
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     Map<String, Set<JobDto>> viewAllJobs() {
 
         return Map.of(COLLECTIONS_DTO_KEY, jobService.viewAllJobs());
     }
 
-    @GetMapping(path = "/{uuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/{uuid}",
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     JobDto viewJobWithId(@PathVariable UUID uuid) {
 
         return jobService.viewJobWithId(uuid);
     }
 
     @PatchMapping(path = "/{uuid}", consumes = MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON,
-        produces = MediaType.APPLICATION_JSON_VALUE)
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     JobDto modifyJobWithId(@PathVariable UUID uuid, @Valid @RequestBody JobDto jobDTO) {
 
         return jobService.modifyJobWithId(uuid, jobDTO);
@@ -72,7 +73,8 @@ class JobController {
         jobService.deleteJobWithId(uuid);
     }
 
-    @GetMapping(path = "/{uuid}/job-applications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/{uuid}/job-applications",
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     Map<String, Set<JobApplicationDto>> viewApplicationsForJob(@PathVariable UUID uuid) {
 
          return Map.of(COLLECTIONS_DTO_KEY, jobService.viewApplicationsForJob(uuid));
@@ -100,7 +102,7 @@ class JobApplicationController {
     private final JobServiceInternal jobService;
 
     @PatchMapping(path = "/{uuid}", consumes = MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON,
-        produces = MediaType.APPLICATION_JSON_VALUE)
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     JobApplicationDto modifyJobApplicationWithId(@PathVariable UUID uuid,
         @Valid @RequestBody JobApplicationDto jobApplicationDTO) {
 

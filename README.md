@@ -60,5 +60,11 @@ From the project root directory
 sudo docker compose down -v
 ```
 
+### Run Tests
+From the backend directory
+```shell
+mvn clean test
+```
+
 ### License
 This demo is released under the MIT license.

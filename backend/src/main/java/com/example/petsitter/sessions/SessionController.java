@@ -35,7 +35,8 @@ class SessionController {
 
     private final JwtEncoder jwtEncoder;
 
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponseDto createSession(@Valid @RequestBody SessionRequestDto sessionRequestDto) {
 

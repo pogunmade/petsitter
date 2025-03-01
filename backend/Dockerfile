@@ -5,7 +5,7 @@ FROM --platform=$BUILDPLATFORM maven:3.9.9-eclipse-temurin-17 AS builder
      COPY pom.xml /workdir/pom.xml
       RUN mvn dependency:go-offline
      COPY src /workdir/src
-      RUN mvn verify
+      RUN mvn verify -DskipTests
       RUN mkdir -p target/extract
   WORKDIR target/extract
       RUN java -Djarmode=layertools -jar ../*.jar extract

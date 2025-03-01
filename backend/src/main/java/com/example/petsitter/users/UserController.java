@@ -48,14 +48,15 @@ class UserController {
         return ResponseEntity.created(location).build();
     }
 
-    @GetMapping(path = "/{uuid}", produces = MediaType.APPLICATION_JSON_VALUE )
+    @GetMapping(path = "/{uuid}",
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     UserDto viewUserWithId(@PathVariable UUID uuid) {
 
         return userService.viewUserWithId(uuid);
     }
 
     @PatchMapping(path = "/{uuid}", consumes = MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON,
-        produces = MediaType.APPLICATION_JSON_VALUE)
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     UserDto modifyUserWithId(@PathVariable UUID uuid, @Valid @RequestBody UserDto userDto) {
 
         return userService.modifyUserWithId(uuid, userDto);
@@ -68,13 +69,15 @@ class UserController {
         userService.deleteUserWithId(uuid);
     }
 
-    @GetMapping(path = "/{uuid}/jobs", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/{uuid}/jobs",
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     Map<String, Set<JobDto>> viewJobsForUser(@PathVariable UUID uuid) {
 
         return Map.of(COLLECTIONS_DTO_KEY, userService.viewJobsForUser(uuid));
     }
 
-    @GetMapping(path = "{uuid}/job-applications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "{uuid}/job-applications",
+        produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE })
     Map<String, Set<JobApplicationDto>> viewApplicationsForUser(@PathVariable UUID uuid) {
 
         return Map.of(COLLECTIONS_DTO_KEY, userService.viewApplicationsForUser(uuid));
