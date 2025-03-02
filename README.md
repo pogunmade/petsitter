@@ -41,25 +41,18 @@ Pre-installed API Users
   - email: pet-sitter@example.com
   - password: password
 
-### Postgres pgAdmin
-From your browser
-```
-localhost:5050
+### Postgres 
+From your shell
+
+```shell
+sudo docker exec -it postgres_container_name_or_id bash
 ```
 
-Login
-- Email Address: admin@example.com
-- Password: password
+Once inside the container's shell connect to the database
 
-Add database
-- Right-click "Servers" in top left corner and select "Register" -> "Server"
-- Name the Server
-- Select the "Connection" tab and add the following:
-  - Host name/address: db
-  - Port: 5432
-  - Maintenance database: pet-sitter
-  - Username: pet-sitter-backend
-  - Password: password
+```shell
+psql -U pet-sitter-backend -d pet-sitter
+```
 
 ### Stop
 From the project root directory
