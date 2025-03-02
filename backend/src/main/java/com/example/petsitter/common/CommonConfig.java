@@ -12,7 +12,8 @@ import java.time.format.DateTimeFormatter;
 public class CommonConfig {
 
     public static final String MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON = "application/merge-patch+json";
-    public static final String MEDIA_TYPE_APPLICATION_PROBLEM_JSON = "application/problem+json";
+
+    public static final String COLLECTIONS_DTO_KEY = "items";
 
     public static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm";
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(DATE_TIME_FORMAT);

@@ -1,6 +1,5 @@
 package com.example.petsitter.jobs;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Max;
@@ -12,23 +11,17 @@ import lombok.Value;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static com.example.petsitter.common.CommonConfig.DATE_TIME_FORMAT;
-
 @Value
 @Builder(toBuilder = true)
-@Schema(name = "Job")
 public class JobDto {
 
-    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     UUID id;
 
     UUID creatorUserId;
 
-    @Schema(type = "string", example = "2024-12-15 12:00")
     @Future
     LocalDateTime startTime;
 
-    @Schema(type = "string", example = "2024-12-15 14:00")
     @Future
     LocalDateTime endTime;
 
@@ -40,7 +33,6 @@ public class JobDto {
 
     @Value
     @Builder
-    @Schema(name = "Dog")
     public static class DogDto {
 
         @Size(max=30)

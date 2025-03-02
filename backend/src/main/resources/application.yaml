@@ -18,11 +18,3 @@ spring:
   jackson:
     default-property-inclusion: non_null
     property-naming-strategy: SNAKE_CASE
-
-springdoc:
-
-  api-docs:
-    path: /api-docs
-
-  swagger-ui:
-    path: /swagger-ui

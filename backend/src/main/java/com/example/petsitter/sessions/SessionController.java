@@ -1,14 +1,6 @@
 package com.example.petsitter.sessions;
 
 import com.example.petsitter.common.Email;
-import com.example.petsitter.openapi.ApiProblemResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -37,7 +29,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/sessions")
 @RequiredArgsConstructor
-@Tag(name = "Users")
 class SessionController {
 
     private final AuthenticationManager authenticationManager;
@@ -46,28 +37,6 @@ class SessionController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Start Session (Login)")
-    @SecurityRequirements
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
-        @ExampleObject(value =
-            """
-            {
-              "email": "email@example.com",
-              "password": "1Upper1Lower1Number"
-            }
-            """)})
-    )
-    @ApiResponse(responseCode = "201", description = "Session", content = @Content(
-        schema = @Schema(implementation = SessionResponseDto.class), examples = {@ExampleObject(value =
-            """
-            {
-              "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-              "auth_header": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJp..."
-            }
-            """
-        )})
-    )
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
     SessionResponseDto createSession(@Valid @RequestBody SessionRequestDto sessionRequestDto) {
 
         if (sessionRequestDto.getEmail() == null) {
@@ -110,7 +79,6 @@ class SessionController {
 
 @Value
 @Builder
-@Schema(name = "SessionRequest")
 class SessionRequestDto {
 
     @Valid
@@ -119,14 +87,7 @@ class SessionRequestDto {
 
     @NotBlank
     @Size(min=8, max=20)
-    @Schema(format = "password", accessMode = Schema.AccessMode.WRITE_ONLY)
     String password;
 }
 
-@Schema(name = "Session")
-record SessionResponseDto(
-
-    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
-    UUID userId,
-
-    @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "apiKey (Bearer token)") String authHeader) {}
+record SessionResponseDto(UUID userId, String authHeader) {}
