@@ -1,19 +1,8 @@
 package com.example.petsitter.jobs;
 
-import com.example.petsitter.common.JobApplicationCollectionDto;
-import com.example.petsitter.common.JobCollectionDto;
 import com.example.petsitter.common.exception.*;
-import com.example.petsitter.openapi.ApiProblemResponse;
 import com.example.petsitter.sessions.SessionService;
 import com.example.petsitter.users.UserService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.headers.Header;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,8 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.example.petsitter.common.CommonConfig.DATE_TIME_FORMATTER;
-import static com.example.petsitter.common.CommonConfig.MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON;
+import static com.example.petsitter.common.CommonConfig.*;
 import static com.example.petsitter.sessions.Permission.Action.*;
 import static com.example.petsitter.sessions.Permission.Attribute.*;
 import static com.example.petsitter.sessions.Permission.Resource.JOB;
@@ -42,36 +30,11 @@ import static com.example.petsitter.users.User.UserRole.PET_SITTER;
 @RestController
 @RequestMapping("/jobs")
 @RequiredArgsConstructor
-@Tag(name = "Jobs")
 class JobController {
-
-    private static final String EXAMPLE_JOB_ID = "5882fadc-50ac-432a-86f1-02b5eedd5df0";
 
     private final JobServiceInternal jobService;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Create Job")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
-        @ExampleObject(value =
-            """
-            {
-              "start_time": "2024-12-02 12:00",
-              "end_time": "2024-12-02 14:00",
-              "activity": "Walk",
-              "dog": {
-                "name": "Rambo",
-                "age": "3",
-                "breed": "Bichon Frisé",
-                "size": "6kg"
-              }
-            }
-            """)})
-    )
-    @ApiResponse(responseCode = "201", description = "Created",
-        headers = { @Header(name = "Location", description = "Job URI", schema = @Schema(type = "string")) })
-    @ApiProblemResponse(responseCode = "400", description = "Bad Request")
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
     ResponseEntity<Void> createJob(@Valid @RequestBody JobDto jobDTO) {
 
         URI location = ServletUriComponentsBuilder
@@ -84,180 +47,39 @@ class JobController {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "View all Jobs")
-    @ApiResponse(responseCode = "200", description = "All Jobs", content = @Content(
-        schema = @Schema(implementation = JobCollectionDto.class), examples = {@ExampleObject(value =
-            """
-            {
-              "items": [
-                {
-                  "id":  \"""" + EXAMPLE_JOB_ID + "\"," + """
-                  "creator_user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                  "start_time": "2024-12-02 12:00",
-                  "end_time": "2024-12-02 14:00",
-                  "activity": "Walk",
-                  "dog": {
-                    "name": "Rambo",
-                    "age": "3",
-                    "breed": "Bichon Frisé",
-                    "size": "6kg"
-                  }
-                },
-                {
-                  "id": "dc28aaaf-f12f-4804-b529-f1be7ec8b77d",
-                  "creator_user_id": "b191166e-70e6-4f63-b7eb-9e6e7a3ae1e5",
-                  "start_time": "2024-12-04 13:00",
-                  "end_time": "2024-12-04 17:00",
-                  "activity": "Walk, House sit, Play (requires constant attention)",
-                  "dog": {
-                    "name": "Minnie",
-                    "age": "1",
-                    "breed": "Jack Russell Terrier",
-                    "size": "5kg"
-                  }
-                }
-              ]
-            }
-            """)}))
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
-    JobCollectionDto viewAllJobs() {
+    Map<String, Set<JobDto>> viewAllJobs() {
 
-        return new JobCollectionDto(jobService.viewAllJobs());
+        return Map.of(COLLECTIONS_DTO_KEY, jobService.viewAllJobs());
     }
 
     @GetMapping(path = "/{uuid}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "View Job")
-    @ApiResponse(responseCode = "200", description = "Job", content = @Content(
-        schema = @Schema(implementation = JobDto.class), examples = {@ExampleObject(value =
-            """
-            {
-              "id":  \"""" + EXAMPLE_JOB_ID + "\"," + """
-              "creator_user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-              "start_time": "2024-12-02 12:00",
-              "end_time": "2024-12-02 14:00",
-              "activity": "Walk",
-              "dog": {
-                "name": "Rambo",
-                "age": "3",
-                "breed": "Bichon Frisé",
-                "size": "6kg"
-              }
-            }
-            """)}))
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
-    @ApiProblemResponse(responseCode = "404", description = "Job Not Found")
-    JobDto viewJobWithId(@Parameter(description = "Job ID") @PathVariable UUID uuid) {
+    JobDto viewJobWithId(@PathVariable UUID uuid) {
 
         return jobService.viewJobWithId(uuid);
     }
 
     @PatchMapping(path = "/{uuid}", consumes = MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Modify Job")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
-        @ExampleObject(value =
-            """  
-            {
-              "end_time": "2024-12-02 17:00",
-              "activity": "Walk, Exercise",
-              "dog": {
-                "age": "4",
-                "size": "8kg"
-              }
-            }
-            """)})
-    )
-    @ApiResponse(responseCode = "200", description = "Modified Job", content = @Content(
-        schema = @Schema(implementation = JobDto.class), examples = {@ExampleObject(value =
-            """
-            {
-              "id":  \"""" + EXAMPLE_JOB_ID + "\"," + """
-              "creator_user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-              "start_time": "2024-12-02 12:00",
-              "end_time": "2024-12-02 17:00",
-              "activity": "Walk, Exercise",
-              "dog": {
-                "name": "Rambo",
-                "age": "4",
-                "breed": "Bichon Frisé",
-                "size": "8kg"
-              }
-            }
-            """)})
-    )
-    @ApiProblemResponse(responseCode = "400", description = "Bad Request")
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
-    @ApiProblemResponse(responseCode = "404", description = "Job Not Found")
-    JobDto modifyJobWithId(@Parameter(description = "Job ID") @PathVariable UUID uuid,
-                           @Valid @RequestBody JobDto jobDTO) {
+    JobDto modifyJobWithId(@PathVariable UUID uuid, @Valid @RequestBody JobDto jobDTO) {
 
         return jobService.modifyJobWithId(uuid, jobDTO);
     }
 
     @DeleteMapping("/{uuid}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete Job")
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
-    @ApiProblemResponse(responseCode = "404", description = "Job Not Found")
-    void deleteJobWithId(@Parameter(description = "Job ID") @PathVariable UUID uuid) {
+    void deleteJobWithId(@PathVariable UUID uuid) {
 
         jobService.deleteJobWithId(uuid);
     }
 
     @GetMapping(path = "/{uuid}/job-applications", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "View Applications for Job")
-    @ApiResponse(responseCode = "200", description = "Job Applications for Job", content = @Content(
-        schema = @Schema(implementation = JobApplicationCollectionDto.class),  examples = {@ExampleObject(value =
-            """
-            {
-              "items": [
-                {
-                  "id": "bec38ff9-4cdb-4d32-9cce-e136fa0617c1",
-                  "status": "PENDING",
-                  "user_id": "9a73869f-a9ee-4e13-a5c3-f48ee529ad1d",
-                  "job_id": \"""" + EXAMPLE_JOB_ID + "\"" + """
-                },
-                {
-                  "id": "45dbdc77-c25a-473c-a96a-8ce960b3b11a",
-                  "status": "PENDING",
-                  "user_id": "c8dec9a1-8170-4a5f-bffb-2871ada16d9e",
-                  "job_id": \"""" + EXAMPLE_JOB_ID + "\"" + """
-                }
-              ]
-            }
-            """)})
-    )
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
-    @ApiProblemResponse(responseCode = "404", description = "Job Not Found")
-    JobApplicationCollectionDto viewApplicationsForJob( @Parameter(description = "Job ID") @PathVariable UUID uuid) {
+    Map<String, Set<JobApplicationDto>> viewApplicationsForJob(@PathVariable UUID uuid) {
 
-        return new JobApplicationCollectionDto(jobService.viewApplicationsForJob(uuid));
+         return Map.of(COLLECTIONS_DTO_KEY, jobService.viewApplicationsForJob(uuid));
     }
 
     @PostMapping(path = "/{uuid}/job-applications", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Create Job Application")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
-        @ExampleObject(value =
-            """
-            {
-              "status": "PENDING"
-            }
-            """)})
-    )
-    @ApiResponse(responseCode = "201" , description = "Created", headers =
-        { @Header(name = "Location", description = "Job Application URI", schema = @Schema(type = "string")) }
-    )
-    @ApiProblemResponse(responseCode = "400", description = "Bad Request")
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
-    @ApiProblemResponse(responseCode = "404", description = "Job Not Found")
-    ResponseEntity<Void> createJobApplication(
-        @Parameter(description = "Job ID") @PathVariable UUID uuid,
+    ResponseEntity<Void> createJobApplication(@PathVariable UUID uuid,
         @Valid @RequestBody JobApplicationDto jobApplicationDTO) {
 
         URI location = ServletUriComponentsBuilder
@@ -273,40 +95,13 @@ class JobController {
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/job-applications")
-@Tag(name = "Jobs")
 class JobApplicationController {
-
-    private static final String EXAMPLE_JOB_APPLICATION_ID = "45dbdc77-c25a-473c-a96a-8ce960b3b11a";
 
     private final JobServiceInternal jobService;
 
     @PatchMapping(path = "/{uuid}", consumes = MEDIA_TYPE_APPLICATION_MERGE_PATCH_JSON,
         produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Modify Job Application")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
-        @ExampleObject(value =
-            """  
-            {
-              "status": "ACCEPTED"
-            }
-            """)})
-    )
-    @ApiResponse(responseCode = "200", description = "Modified Job Application", content = @Content(
-        schema = @Schema(implementation = JobApplicationDto.class), examples = {@ExampleObject(value =
-            """
-            {
-              "id":  \"""" + EXAMPLE_JOB_APPLICATION_ID + "\"," + """
-              "status": "ACCEPTED",
-              "user_id": "c8dec9a1-8170-4a5f-bffb-2871ada16d9e",
-              "job_id": "5882fadc-50ac-432a-86f1-02b5eedd5df0"
-            }
-            """)})
-    )
-    @ApiProblemResponse(responseCode = "401", description = "Unauthorized")
-    @ApiProblemResponse(responseCode = "403", description = "Forbidden")
-    @ApiProblemResponse(responseCode = "404", description = "Job Application Not Found")
-    JobApplicationDto modifyJobApplicationWithId(
-        @Parameter(description = "Job Application ID") @PathVariable UUID uuid,
+    JobApplicationDto modifyJobApplicationWithId(@PathVariable UUID uuid,
         @Valid @RequestBody JobApplicationDto jobApplicationDTO) {
 
         return jobService.modifyJobApplicationWithId(uuid, jobApplicationDTO);
