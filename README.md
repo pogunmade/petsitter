@@ -70,7 +70,7 @@ Add database
 ### Stop
 From the project root directory
 ```shell
-sudo docker compose down
+sudo docker compose down -v
 ```
 
 ### License
