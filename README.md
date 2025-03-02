@@ -24,7 +24,7 @@ sudo docker compose up
 ### Swagger UI
 From your browser
 ```
-localhost:8080/swagger-ui
+localhost:9090
 ```
 
 Pre-installed API Users
@@ -40,12 +40,6 @@ Pre-installed API Users
 - Sally The Pet Sitter
   - email: pet-sitter@example.com
   - password: password
-
-### OpenAPI Contract 
-From your browser
-```
-localhost:8080/api-docs.yaml
-```
 
 ### Postgres pgAdmin
 From your browser
