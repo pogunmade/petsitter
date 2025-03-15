@@ -17,7 +17,7 @@ info:
   version: "0.1"
 servers:
   - url: http://localhost:8080
-    description: Generated server url
+    description: Local dev server
 security:
   - SessionToken: []
 tags:
@@ -26,6 +26,55 @@ tags:
   - name: Jobs
     description: Job related operations
 paths:
+  /sessions:
+    post:
+      tags:
+        - Users
+      summary: Start Session (Login)
+      operationId: createSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionRequest"
+            examples:
+              validLogin:
+                value:
+                  email: "post-session@example.com"
+                  password: 1Upper1Lower1Number
+              invalidLogin:
+                value:
+                  email: "non-existent-user@example.com"
+                  password: 1Upper1Lower1Number
+        required: true
+      responses:
+        "201":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+              examples:
+                validLogin:
+                  value:
+                    user_id: f7329e32-b689-4ded-9819-994bbe7edade
+                    auth_header: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJp..."
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                invalidLogin:
+                  value:
+                    type: "http://localhost:8080/errors/unauthorized"
+                    title: Unauthorized
+                    status: 401
+                    detail: Bad credentials
+                    instance: /sessions
+                    timestamp: "2025-02-23 11:46"
+      security: []
   /users:
     post:
       tags:
@@ -37,12 +86,20 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/User"
-            example:
-              email: email@example.com
-              password: 1Upper1Lower1Number
-              full_name: John Smith
-              roles:
-                - PET_OWNER
+            examples:
+              validUser:
+                value:
+                  email: "john-smith@example.com"
+                  password: 1Upper1Lower1Number
+                  full_name: John Smith
+                  roles:
+                    - PET_OWNER
+              invalidUser:
+                value:
+                  email: "missing-full-name@example.com"
+                  password: 1Upper1Lower1Number
+                  roles:
+                    - PET_OWNER
         required: true
       responses:
         "201":
@@ -60,25 +117,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
-                  $ref: "#/components/examples/problemDetail"
+                invalidUser:
+                  value:
+                    type: "http://localhost:8080/errors/bad-request"
+                    title: Bad Request
+                    status: 400
+                    detail: Invalid argument(s)
+                    instance: /users
+                    user.full_name: cannot be null
+                    timestamp: "2025-02-23 11:46"
       security: []
-  /sessions:
-    post:
+  /users/{uuid}:
+    get:
       tags:
         - Users
-      summary: Start Session (Login)
-      operationId: createSession
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SessionRequest"
-            example:
-              email: email@example.com
-              password: 1Upper1Lower1Number
-        required: true
+      summary: View User
+      operationId: viewUserWithId
+      parameters:
+        - name: uuid
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validUser:
+              value: 5d33db88-ef90-4868-814c-f4dd48273a04
       responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              examples:
+                validUser:
+                  value:
+                    id: 5d33db88-ef90-4868-814c-f4dd48273a04
+                    email: "get-user@example.com"
+                    full_name: John Smith
+                    roles:
+                      - PET_OWNER
         "401":
           description: Unauthorized
           content:
@@ -86,19 +166,364 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
+                unauthorized:
                   $ref: "#/components/examples/problemDetail"
-        "201":
-          description: Session
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+        "404":
+          description: User Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                notFound:
+                  $ref: "#/components/examples/problemDetail"
+    patch:
+      tags:
+        - Users
+      summary: Modify User
+      operationId: modifyUserWithId
+      parameters:
+        - name: uuid
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validUpdate:
+              value: fdc09ca4-4e44-4040-8873-9eaec0b456a9
+            invalidUpdate:
+              value: fdc09ca4-4e44-4040-8873-9eaec0b456a9
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: "#/components/schemas/User"
+            examples:
+              validUpdate:
+                value:
+                  email: "new-email@example.com"
+                  password: Y0uKn0wTheDri11
+                  roles:
+                    - PET_OWNER
+                    - PET_SITTER
+              invalidUpdate:
+                value:
+                  email: "malformed-email-example.com"
+                  roles: []
+        required: true
+      responses:
+        "200":
+          description: Modified User
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Session"
-              example:
-                user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                auth_header: Bearer eyJhbGciOiJIUzI1NiJ9.eyJp...
-      security: []
+                $ref: "#/components/schemas/User"
+              examples:
+                validUpdate:
+                  value:
+                    id: fdc09ca4-4e44-4040-8873-9eaec0b456a9
+                    email: "new-email@example.com"
+                    full_name: John Smith
+                    roles:
+                      - PET_OWNER
+                      - PET_SITTER
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                invalidUpdate:
+                  value:
+                    type: "http://localhost:8080/errors/bad-request"
+                    title: Bad Request
+                    status: 400
+                    detail: Invalid argument(s)
+                    instance: /users/fdc09ca4-4e44-4040-8873-9eaec0b456a9
+                    user.email.address: must be a well-formed email address
+                    user.roles: size must be between 1 and 3
+                    timestamp: "2025-03-08 14:58"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                unauthorized:
+                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+        "404":
+          description: User Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                notFound:
+                  $ref: "#/components/examples/problemDetail"
+    delete:
+      tags:
+        - Users
+      summary: Delete User
+      operationId: deleteUserWithId
+      parameters:
+        - name: uuid
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validUser:
+              value: e3923482-3487-4327-a796-f86467f73e57
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                unauthorized:
+                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+        "404":
+          description: User Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                notFound:
+                  $ref: "#/components/examples/problemDetail"
+  /users/{uuid}/jobs:
+    get:
+      tags:
+        - Users
+      summary: View Jobs for User
+      operationId: viewJobsForUser
+      parameters:
+        - name: uuid
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validUser:
+              value: 7afc58f7-7acf-49fe-967e-9b73accc2e09
+      responses:
+        "200":
+          description: Jobs for User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobCollection"
+              examples:
+                validUser:
+                  value:
+                    items:
+                      - id: 18f4d0fc-129e-4212-ad8a-c070e4619dd9
+                        creator_user_id: 7afc58f7-7acf-49fe-967e-9b73accc2e09
+                        start_time: "2025-03-10 12:00"
+                        end_time: "2025-03-10 14:00"
+                        activity: Walk
+                        dog:
+                          name: Rambo
+                          age: 3
+                          breed: Bichon Frisé
+                          size: 6kg
+                      - id: d19d609a-7ab0-4abe-833b-914017be02fe
+                        creator_user_id: 7afc58f7-7acf-49fe-967e-9b73accc2e09
+                        start_time: "2025-03-13 12:00"
+                        end_time: "2025-03-13 17:00"
+                        activity: Walk, House sit
+                        dog:
+                          name: Rambo
+                          age: 3
+                          breed: Bichon Frisé
+                          size: 6kg
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                unauthorized:
+                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+  /users/{uuid}/job-applications:
+    get:
+      tags:
+        - Users
+      summary: View Job Applications for User
+      operationId: viewApplicationsForUser
+      parameters:
+        - name: uuid
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validUser:
+              value: 1ccd609a-8339-40bd-b8ac-f0fbf8bea21c
+      responses:
+        "200":
+          description: Job Applications for User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobApplicationCollection"
+              examples:
+                validUser:
+                  value:
+                    items:
+                      - id: e60fd6aa-9386-4577-b3a7-b6d616339858
+                        status: PENDING
+                        user_id: 1ccd609a-8339-40bd-b8ac-f0fbf8bea21c
+                        job_id: d7c95c55-4db6-4a84-992f-6966233ea06f
+                      - id: fb141f76-cf70-417a-8967-fe2a354fbf28
+                        status: ACCEPTED
+                        user_id: 1ccd609a-8339-40bd-b8ac-f0fbf8bea21c
+                        job_id: 1d7db287-1fa0-43a2-ab4b-6aa5b2bd9c56
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                unauthorized:
+                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
   /jobs:
+    post:
+      tags:
+        - Jobs
+      summary: Create Job
+      operationId: createJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Job"
+            examples:
+              validJob:
+                value:
+                  start_time: "2028-03-13 11:30"
+                  end_time: "2028-03-13 13:30"
+                  activity: Walk
+                  dog:
+                    name: Rambo
+                    age: 3
+                    breed: Bichon Frisé
+                    size: 6kg
+              invalidJob:
+                value:
+                  start_time: "2028-04-13 12:00"
+                  end_time: "2028-04-13 11:00"
+                  dog:
+                    name: Rambo
+                    age: 3
+                    breed: Bichon Frisé
+                    size: 6kg
+        required: true
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              description: Job URI
+              style: simple
+              schema:
+                type: string
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                invalidJob:
+                  value:
+                    type: "http://localhost:8080/errors/bad-request"
+                    title: Bad Request
+                    status: 400
+                    detail: Invalid argument(s)
+                    instance: /jobs
+                    job: start time must be before end time
+                    job.activity: cannot be null
+                    timestamp: "2025-03-09 10:11"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        #              examples:
+        #                unauthorized:
+        #                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+    #              examples:
+    #                forbidden:
+    #                  $ref: "#/components/examples/problemDetail"
     get:
       tags:
         - Jobs
@@ -111,28 +536,85 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobCollection"
-              example:
-                items:
-                  - id: 5882fadc-50ac-432a-86f1-02b5eedd5df0
-                    creator_user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                    start_time: 2024-12-02 12:00
-                    end_time: 2024-12-02 14:00
-                    activity: Walk
+              examples:
+                allJobs:
+                  value:
+                    items:
+                      - id: 5882fadc-50ac-432a-86f1-02b5eedd5df0
+                        creator_user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                        start_time: "2025-03-20 10:00"
+                        end_time: "2025-03-20 11:30"
+                        activity: Play
+                        dog:
+                          name: Rambo
+                          age: "3"
+                          breed: Bichon Frisé
+                          size: 6kg
+                      - id: dc28aaaf-f12f-4804-b529-f1be7ec8b77d
+                        creator_user_id: b191166e-70e6-4f63-b7eb-9e6e7a3ae1e5
+                        start_time: "2025-03-20 12:00"
+                        end_time: "2025-03-20 15:00"
+                        activity: Walk
+                        dog:
+                          name: Archie
+                          age: 6
+                          breed: Bolognese
+                          size: 3kg
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        #              examples:
+        #                unauthorized:
+        #                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  #              examples:
+  #                forbidden:
+  #                  $ref: "#/components/examples/problemDetail"
+  /jobs/{uuid}:
+    get:
+      tags:
+        - Jobs
+      summary: View Job
+      operationId: viewJobWithId
+      parameters:
+        - name: uuid
+          in: path
+          description: Job ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validJob:
+              value: 8f028c7a-b18b-4fb7-93f5-af7fa5df4de2
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                validJob:
+                  value:
+                    id: 8f028c7a-b18b-4fb7-93f5-af7fa5df4de2
+                    creator_user_id: 17007b2c-6791-4773-bcdd-4c474698e2b9
+                    start_time: "2025-03-17 13:00"
+                    end_time: "2025-03-17 15:00"
+                    activity: Walk, Play
                     dog:
                       name: Rambo
-                      age: "3"
+                      age: 3
                       breed: Bichon Frisé
                       size: 6kg
-                  - id: dc28aaaf-f12f-4804-b529-f1be7ec8b77d
-                    creator_user_id: b191166e-70e6-4f63-b7eb-9e6e7a3ae1e5
-                    start_time: 2024-12-04 13:00
-                    end_time: 2024-12-04 17:00
-                    activity: "Walk, House sit, Play (requires constant attention)"
-                    dog:
-                      name: Minnie
-                      age: "1"
-                      breed: Jack Russell Terrier
-                      size: 5kg
         "401":
           description: Unauthorized
           content:
@@ -140,7 +622,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
+                unauthorized:
                   $ref: "#/components/examples/problemDetail"
         "403":
           description: Forbidden
@@ -148,47 +630,73 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-    post:
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+        "404":
+          description: Job Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                notFound:
+                  $ref: "#/components/examples/problemDetail"
+    patch:
       tags:
         - Jobs
-      summary: Create Job
-      operationId: createJob
+      summary: Modify Job
+      operationId: modifyJobWithId
+      parameters:
+        - name: uuid
+          in: path
+          description: Job ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validUpdate:
+              value: 11eab1f0-288f-4dde-a32b-4401deb52263
+            invalidUpdate:
+              value: 11eab1f0-288f-4dde-a32b-4401deb52263
       requestBody:
         content:
-          application/json:
+          application/merge-patch+json:
             schema:
               $ref: "#/components/schemas/Job"
-            example:
-              start_time: 2024-12-02 12:00
-              end_time: 2024-12-02 14:00
-              activity: Walk
-              dog:
-                name: Rambo
-                age: "3"
-                breed: Bichon Frisé
-                size: 6kg
+            examples:
+              validUpdate:
+                value:
+                  end_time: "2028-03-20 15:00"
+                  activity: Walk, Exercise
+                  dog:
+                    age: 7
+                    size: 5kg
+              invalidUpdate:
+                value:
+                  end_time: "2028-03-20 09:00"
         required: true
       responses:
-        "201":
-          description: Created
-          headers:
-            Location:
-              description: Job URI
-              style: simple
-              schema:
-                type: string
-        "401":
-          description: Unauthorized
+        "200":
+          description: Modified Job
           content:
-            application/problem+json:
+            application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/Job"
+              examples:
+                validUpdate:
+                  value:
+                    id: 11eab1f0-288f-4dde-a32b-4401deb52263
+                    creator_user_id: 10fba06c-8a79-4016-98af-d1c1e0039ddf
+                    start_time: "2028-03-20 10:00"
+                    end_time: "2028-03-20 15:00"
+                    activity: Walk, Exercise
+                    dog:
+                      name: Archie
+                      age: 7
+                      breed: Bolognese
+                      size: 5kg
         "400":
           description: Bad Request
           content:
@@ -196,7 +704,87 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
+                invalidUpdate:
+                  value:
+                    type: "http://localhost:8080/errors/bad-request"
+                    title: Bad Request
+                    status: 400
+                    detail: Invalid argument(s)
+                    instance: /jobs/11eab1f0-288f-4dde-a32b-4401deb52263
+                    job.end_time: "end time 2028-03-20 09:00 must be after current start time 2028-03-20 10:00"
+                    timestamp: "2025-03-09 15:50"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                unauthorized:
+                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+        "404":
+          description: Job Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                notFound:
+                  $ref: "#/components/examples/problemDetail"
+    delete:
+      tags:
+        - Jobs
+      summary: Delete Job
+      operationId: deleteJobWithId
+      parameters:
+        - name: uuid
+          in: path
+          description: Job ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          examples:
+            validJob:
+              value: 9cb2ab0a-16fb-4ead-bbde-5167c0cb823c
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                unauthorized:
+                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+        "404":
+          description: Job Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                notFound:
                   $ref: "#/components/examples/problemDetail"
   /jobs/{uuid}/job-applications:
     get:
@@ -212,29 +800,28 @@ paths:
           schema:
             type: string
             format: uuid
+          examples:
+            validJob:
+              value: 92ee8ec0-d0eb-4204-9cc6-c0696ff9e003
       responses:
-        "404":
-          description: Job Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
         "200":
           description: Job Applications for Job
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobApplicationCollection"
-              example:
-                items:
-                  - id: bec38ff9-4cdb-4d32-9cce-e136fa0617c1
-                    status: PENDING
-                    user_id: 9a73869f-a9ee-4e13-a5c3-f48ee529ad1d
-                    job_id: 5882fadc-50ac-432a-86f1-02b5eedd5df0
-                  - id: 45dbdc77-c25a-473c-a96a-8ce960b3b11a
-                    status: PENDING
-                    user_id: c8dec9a1-8170-4a5f-bffb-2871ada16d9e
-                    job_id: 5882fadc-50ac-432a-86f1-02b5eedd5df0
+              examples:
+                validJob:
+                  value:
+                    items:
+                      - id: cfafe48a-e0d9-4999-8966-1ef532ffee57
+                        status: PENDING
+                        user_id: 524d82a8-5040-47bf-88c3-b75ee949be21
+                        job_id: 92ee8ec0-d0eb-4204-9cc6-c0696ff9e003
+                      - id: 8937e48a-dcf2-4063-ada6-cfea662f87fd
+                        status: PENDING
+                        user_id: 1dce6402-7bdb-4a59-a6a4-4f711af39d8d
+                        job_id: 92ee8ec0-d0eb-4204-9cc6-c0696ff9e003
         "401":
           description: Unauthorized
           content:
@@ -242,7 +829,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
+                unauthorized:
                   $ref: "#/components/examples/problemDetail"
         "403":
           description: Forbidden
@@ -250,6 +837,18 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                forbidden:
+                  $ref: "#/components/examples/problemDetail"
+        "404":
+          description: Job Not Found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                notFound:
+                  $ref: "#/components/examples/problemDetail"
     post:
       tags:
         - Jobs
@@ -263,42 +862,25 @@ paths:
           schema:
             type: string
             format: uuid
+          examples:
+            validJobApplication:
+              value: 5b7ab97d-c949-4ef5-8289-969dfef1916a
+            invalidJobApplication:
+              value: 5b7ab97d-c949-4ef5-8289-969dfef1916a
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/JobApplication"
-            example:
-              status: PENDING
+            examples:
+              validJobApplication:
+                value:
+                  status: PENDING
+              invalidJobApplication:
+                value:
+                  status: ACCEPTED
         required: true
       responses:
-        "404":
-          description: Job Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "400":
-          description: Bad Request
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-              examples:
-                Problem Detail:
-                  $ref: "#/components/examples/problemDetail"
         "201":
           description: Created
           headers:
@@ -307,130 +889,6 @@ paths:
               style: simple
               schema:
                 type: string
-  /users/{uuid}:
-    get:
-      tags:
-        - Users
-      summary: View User
-      operationId: viewUserWithId
-      parameters:
-        - name: uuid
-          in: path
-          description: User ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: User
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-              example:
-                id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                email: email@example.com
-                full_name: John Smith
-                roles:
-                  - PET_OWNER
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-              examples:
-                Problem Detail:
-                  $ref: "#/components/examples/problemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-    delete:
-      tags:
-        - Users
-      summary: Delete User
-      operationId: deleteUserWithId
-      parameters:
-        - name: uuid
-          in: path
-          description: User ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-              examples:
-                Problem Detail:
-                  $ref: "#/components/examples/problemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "204":
-          description: No Content
-    patch:
-      tags:
-        - Users
-      summary: Modify User
-      operationId: modifyUserWithId
-      parameters:
-        - name: uuid
-          in: path
-          description: User ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: "#/components/schemas/User"
-            example:
-              email: new-email@example.com
-              password: Y0uKn0wTheDri11
-              roles:
-                - PET_OWNER
-                - PET_SITTER
-        required: true
-      responses:
-        "200":
-          description: Modified User
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-              example:
-                id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                email: new-email@example.com
-                full_name: John Smith
-                roles:
-                  - PET_OWNER
-                  - PET_SITTER
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
         "400":
           description: Bad Request
           content:
@@ -438,29 +896,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
+                badRequest:
                   $ref: "#/components/examples/problemDetail"
-  /jobs/{uuid}:
-    get:
-      tags:
-        - Jobs
-      summary: View Job
-      operationId: viewJobWithId
-      parameters:
-        - name: uuid
-          in: path
-          description: Job ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "404":
-          description: Job Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
         "401":
           description: Unauthorized
           content:
@@ -468,7 +905,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
+                unauthorized:
                   $ref: "#/components/examples/problemDetail"
         "403":
           description: Forbidden
@@ -476,129 +913,23 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-        "200":
-          description: Job
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Job"
-              example:
-                id: 5882fadc-50ac-432a-86f1-02b5eedd5df0
-                creator_user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                start_time: 2024-12-02 12:00
-                end_time: 2024-12-02 14:00
-                activity: Walk
-                dog:
-                  name: Rambo
-                  age: "3"
-                  breed: Bichon Frisé
-                  size: 6kg
-    delete:
-      tags:
-        - Jobs
-      summary: Delete Job
-      operationId: deleteJobWithId
-      parameters:
-        - name: uuid
-          in: path
-          description: Job ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
+              examples:
+                invalidJobApplication:
+                  value:
+                    type: "http://localhost:8080/errors/forbidden"
+                    title: Forbidden
+                    status: 403
+                    detail: Cannot create - Job Application status must equal PENDING
+                    instance: /jobs/a1b8d59d-59b0-444e-b538-01751ba8b6ae/job-applications
+                    timestamp: "2025-03-09 16:27"
         "404":
           description: Job Not Found
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
-                  $ref: "#/components/examples/problemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "204":
-          description: No Content
-    patch:
-      tags:
-        - Jobs
-      summary: Modify Job
-      operationId: modifyJobWithId
-      parameters:
-        - name: uuid
-          in: path
-          description: Job ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: "#/components/schemas/Job"
-            example:
-              end_time: 2024-12-02 17:00
-              activity: "Walk, Exercise"
-              dog:
-                age: "4"
-                size: 8kg
-        required: true
-      responses:
-        "200":
-          description: Modified Job
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Job"
-              example:
-                id: 5882fadc-50ac-432a-86f1-02b5eedd5df0
-                creator_user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                start_time: 2024-12-02 12:00
-                end_time: 2024-12-02 17:00
-                activity: "Walk, Exercise"
-                dog:
-                  name: Rambo
-                  age: "4"
-                  breed: Bichon Frisé
-                  size: 8kg
-        "404":
-          description: Job Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "400":
-          description: Bad Request
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-              examples:
-                Problem Detail:
+                notFound:
                   $ref: "#/components/examples/problemDetail"
   /job-applications/{uuid}:
     patch:
@@ -614,13 +945,23 @@ paths:
           schema:
             type: string
             format: uuid
+          examples:
+            validUpdate:
+              value: 2c30ff89-f678-4203-ad26-df8b30e64895
+            invalidUpdate:
+              value: 2c30ff89-f678-4203-ad26-df8b30e64895
       requestBody:
         content:
           application/merge-patch+json:
             schema:
               $ref: "#/components/schemas/JobApplication"
-            example:
-              status: ACCEPTED
+            examples:
+              validUpdate:
+                value:
+                  status: WITHDRAWN
+              invalidUpdate:
+                value:
+                  status: ACCEPTED
         required: true
       responses:
         "200":
@@ -629,148 +970,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobApplication"
-              example:
-                id: 45dbdc77-c25a-473c-a96a-8ce960b3b11a
-                status: ACCEPTED
-                user_id: c8dec9a1-8170-4a5f-bffb-2871ada16d9e
-                job_id: 5882fadc-50ac-432a-86f1-02b5eedd5df0
+              examples:
+                validUpdate:
+                  value:
+                    id: 2c30ff89-f678-4203-ad26-df8b30e64895
+                    status: WITHDRAWN
+                    user_id: 34e5ad03-1c6f-40cf-aa37-4a2a2261a92f
+                    job_id: 997ec585-dfd0-4b67-9166-39c3d39df501
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                unauthorized:
+                  $ref: "#/components/examples/problemDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                invalidUpdate:
+                  value:
+                    type: "http://localhost:8080/errors/forbidden"
+                    title: Forbidden
+                    status: 403
+                    detail: "Cannot modify - modifying Job Application as Pet Sitter, status must be in [PENDING, WITHDRAWN]"
+                    instance: /job-applications/2c30ff89-f678-4203-ad26-df8b30e64895
+                    timestamp: "2025-03-09 16:43"
         "404":
           description: Job Application Not Found
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
               examples:
-                Problem Detail:
+                notFound:
                   $ref: "#/components/examples/problemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-  /users/{uuid}/jobs:
-    get:
-      tags:
-        - Users
-      summary: View Jobs for User
-      operationId: viewJobsForUser
-      parameters:
-        - name: uuid
-          in: path
-          description: User ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Jobs for User
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JobCollection"
-              example:
-                items:
-                  - id: 7c7532c1-5ea4-4318-98a5-f9d442fed6cd
-                    creator_user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                    start_time: 2024-12-02 12:00
-                    end_time: 2024-12-02 14:00
-                    activity: Walk
-                    dog:
-                      name: Rambo
-                      age: "3"
-                      breed: Bichon Frisé
-                      size: 6kg
-                  - id: f50e700a-6dfd-4e23-816b-f1fc9be1e2d3
-                    creator_user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                    start_time: 2024-12-06 12:00
-                    end_time: 2024-12-06 15:00
-                    activity: "Walk, House sit"
-                    dog:
-                      name: Rambo
-                      age: "3"
-                      breed: Bichon Frisé
-                      size: 6kg
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-              examples:
-                Problem Detail:
-                  $ref: "#/components/examples/problemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: User Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-  /users/{uuid}/job-applications:
-    get:
-      tags:
-        - Users
-      summary: View Job Applications for User
-      operationId: viewApplicationsForUser
-      parameters:
-        - name: uuid
-          in: path
-          description: User ID
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Job Applications for User
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JobApplicationCollection"
-              example:
-                items:
-                  - id: 85b75ddd-4e0a-42b3-9294-b32e524e17cb
-                    status: PENDING
-                    user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                    job_id: d5648770-3663-411e-878f-ce76fc920ecb
-                  - id: 34e30b8e-9bed-4bcd-aafb-3db3037ef255
-                    status: ACCEPTED
-                    user_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                    job_id: 26dec305-bf14-4b4b-86d6-b3f0fdc9885a
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-              examples:
-                Problem Detail:
-                  $ref: "#/components/examples/problemDetail"
-        "403":
-          description: Forbidden
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: User Not Found
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
 components:
   schemas:
     User:
@@ -783,7 +1022,7 @@ components:
         email:
           type: string
           format: email
-          example: email@example.com
+          example: "email@example.com"
         password:
           maxLength: 20
           minLength: 8
@@ -834,7 +1073,7 @@ components:
         email:
           type: string
           format: email
-          example: email@example.com
+          example: "email@example.com"
         password:
           maxLength: 20
           minLength: 8
@@ -884,10 +1123,10 @@ components:
           format: uuid
         startTime:
           type: string
-          example: 2024-12-15 12:00
+          example: "2024-12-15 12:00"
         endTime:
           type: string
-          example: 2024-12-15 14:00
+          example: "2024-12-15 14:00"
         activity:
           maxLength: 500
           minLength: 0
@@ -946,3 +1185,4 @@ components:
       type: apiKey
       name: Authorization
       in: header
+
