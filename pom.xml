@@ -97,11 +97,11 @@
 							<artifactId>lombok</artifactId>
 							<version>${org.projectlombok.version}</version>
 						</path>
-						<dependency>
+						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok-mapstruct-binding</artifactId>
 							<version>${lombok-mapstruct-binding.version}</version>
-						</dependency>
+						</path>
 					</annotationProcessorPaths>
 					<compilerArgs>
 						<compilerArg>
